@@ -19,12 +19,15 @@ import { usePathname } from 'next/navigation';
 
 export const TopBar: React.FC = () => {
   const pathname = usePathname();
+  const [mounted, setMounted] = useState(false);
   const [storeState, setStoreState] = useState(globalDataStore.getState());
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [isJournalOpen, setIsJournalOpen] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
 
   React.useEffect(() => {
+    setMounted(true);
+    setStoreState({ ...globalDataStore.getState() });
     return globalDataStore.subscribe(() => {
       setStoreState({ ...globalDataStore.getState() });
     });
@@ -59,10 +62,12 @@ export const TopBar: React.FC = () => {
             {/* Organization Tag */}
             <div className="hidden md:flex items-center gap-2 text-[11px] text-[#666666] border-l border-[#E5E5E5] pl-4">
               <Building2 size={13} className="text-[#888888]" />
-              <span className="font-medium text-[#111111]">
-                {storeState.organization?.legalName || storeState.organization?.name || 'Organization Not Configured'}
+              <span className="font-medium text-[#111111]" suppressHydrationWarning>
+                {mounted
+                  ? storeState.organization?.legalName || storeState.organization?.name || 'Organization Not Configured'
+                  : 'Organization Not Configured'}
               </span>
-              {storeState.organization?.gstin && (
+              {mounted && storeState.organization?.gstin && (
                 <span className="text-[#999999] font-mono">GSTIN: {storeState.organization.gstin}</span>
               )}
             </div>
@@ -132,15 +137,16 @@ export const TopBar: React.FC = () => {
               <button
                 onClick={() => setUserDropdownOpen(!userDropdownOpen)}
                 className="flex items-center gap-2 px-2.5 py-1 border border-[#E5E5E5] hover:border-black bg-[#F4F3EF] text-left text-xs transition-colors"
+                suppressHydrationWarning
               >
-                <div className="w-5 h-5 bg-[#111111] text-white flex items-center justify-center text-[10px] font-bold">
+                <div className="w-5 h-5 bg-[#111111] text-white flex items-center justify-center text-[10px] font-bold" suppressHydrationWarning>
                   {currentUser.fullName.charAt(0)}
                 </div>
-                <div className="hidden sm:block">
-                  <div className="text-[11px] font-bold leading-none text-[#111111]">
+                <div className="hidden sm:block" suppressHydrationWarning>
+                  <div className="text-[11px] font-bold leading-none text-[#111111]" suppressHydrationWarning>
                     {currentUser.fullName}
                   </div>
-                  <div className="text-[9px] uppercase tracking-wider text-[#666666] mt-0.5">
+                  <div className="text-[9px] uppercase tracking-wider text-[#666666] mt-0.5" suppressHydrationWarning>
                     {currentUser.role.replace('_', ' ')}
                   </div>
                 </div>

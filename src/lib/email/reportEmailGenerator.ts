@@ -552,58 +552,66 @@ export function generateFinancialReportHtml(options: ReportGeneratorOptions): st
       ? recentLogs
           .map(
             (l) => `
-        <div style="display: flex; justify-content: space-between; align-items: flex-start; padding: 12px 0; border-top: 1px solid #f0f0f0;">
-          <div style="width: 80px; font-size: 12px; color: #5f6368; padding-top: 2px;">${formatShortTime(new Date(l.executedAt))}</div>
-          <div style="flex: 1; padding: 0 16px;">
-            <a href="mailto:${l.recipients[0] || 'accounts@zawrindustries.com'}" style="color: #1a73e8; font-weight: 700; font-size: 13px; text-decoration: underline;">
-              ${l.recipients[0] || 'accounts@zawrindustries.com'}
-            </a>
-            <div style="font-size: 12px; color: #5f6368; margin-top: 3px;">
-              [ZAWR EXECUTIVE] ${l.reportName} — ${frequency} Scheduled Distribution (Automated Service)
-            </div>
-          </div>
-          <div style="width: 70px; text-align: right; font-size: 12px; font-weight: 600; color: #137333; padding-top: 2px;">Delivered</div>
-        </div>
+        <table role="presentation" width="100%" border="0" cellpadding="0" cellspacing="0" style="width: 100%; border-collapse: collapse; border-top: 1px solid #f0f0f0;">
+          <tr>
+            <td align="left" valign="top" style="width: 75px; padding: 12px 0; font-size: 12px; color: #5f6368;">${formatShortTime(new Date(l.executedAt))}</td>
+            <td align="left" valign="top" style="padding: 12px 14px;">
+              <a href="mailto:${l.recipients[0] || 'accounts@zawrindustries.com'}" style="color: #1a73e8; font-weight: 700; font-size: 13px; text-decoration: underline;">
+                ${l.recipients[0] || 'accounts@zawrindustries.com'}
+              </a>
+              <div style="font-size: 12px; color: #5f6368; margin-top: 3px;">
+                [ZAWR EXECUTIVE] ${l.reportName} — ${frequency} Scheduled Distribution (Automated Service)
+              </div>
+            </td>
+            <td align="right" valign="top" style="width: 70px; padding: 12px 0; font-size: 12px; font-weight: 600; color: #137333;">Delivered</td>
+          </tr>
+        </table>
       `
           )
           .join('')
       : `
-        <div style="display: flex; justify-content: space-between; align-items: flex-start; padding: 12px 0; border-top: 1px solid #f0f0f0;">
-          <div style="width: 80px; font-size: 12px; color: #5f6368; padding-top: 2px;">${timeFormatted}</div>
-          <div style="flex: 1; padding: 0 16px;">
-            <a href="mailto:${recipientEmail || 'accounts@zawrindustries.com'}" style="color: #1a73e8; font-weight: 700; font-size: 13px; text-decoration: underline;">
-              ${recipientEmail || 'accounts@zawrindustries.com'}
-            </a>
-            <div style="font-size: 12px; color: #5f6368; margin-top: 3px;">
-              [ZAWR EXECUTIVE] ${reportName} — ${frequency} Distribution (Automated SMTP Service)
-            </div>
-          </div>
-          <div style="width: 70px; text-align: right; font-size: 12px; font-weight: 600; color: #137333; padding-top: 2px;">Delivered</div>
-        </div>
-        <div style="display: flex; justify-content: space-between; align-items: flex-start; padding: 12px 0; border-top: 1px solid #f0f0f0;">
-          <div style="width: 80px; font-size: 12px; color: #5f6368; padding-top: 2px;">${timeFormatted}</div>
-          <div style="flex: 1; padding: 0 16px;">
-            <a href="mailto:syedismail@zawrindustries.com" style="color: #1a73e8; font-weight: 700; font-size: 13px; text-decoration: underline;">
-              syedismail@zawrindustries.com
-            </a>
-            <div style="font-size: 12px; color: #5f6368; margin-top: 3px;">
-              [ZAWR EXECUTIVE] Financial Invariants & Audit Log Synchronization
-            </div>
-          </div>
-          <div style="width: 70px; text-align: right; font-size: 12px; font-weight: 600; color: #137333; padding-top: 2px;">Delivered</div>
-        </div>
-        <div style="display: flex; justify-content: space-between; align-items: flex-start; padding: 12px 0; border-top: 1px solid #f0f0f0;">
-          <div style="width: 80px; font-size: 12px; color: #5f6368; padding-top: 2px;">${timeFormatted}</div>
-          <div style="flex: 1; padding: 0 16px;">
-            <a href="mailto:md@zawrindustries.com" style="color: #1a73e8; font-weight: 700; font-size: 13px; text-decoration: underline;">
-              md@zawrindustries.com
-            </a>
-            <div style="font-size: 12px; color: #5f6368; margin-top: 3px;">
-              [ZAWR EXECUTIVE] Executive Accounting & Ledger Digest
-            </div>
-          </div>
-          <div style="width: 70px; text-align: right; font-size: 12px; font-weight: 600; color: #137333; padding-top: 2px;">Delivered</div>
-        </div>
+        <table role="presentation" width="100%" border="0" cellpadding="0" cellspacing="0" style="width: 100%; border-collapse: collapse; border-top: 1px solid #f0f0f0;">
+          <tr>
+            <td align="left" valign="top" style="width: 75px; padding: 12px 0; font-size: 12px; color: #5f6368;">${timeFormatted}</td>
+            <td align="left" valign="top" style="padding: 12px 14px;">
+              <a href="mailto:${recipientEmail || 'accounts@zawrindustries.com'}" style="color: #1a73e8; font-weight: 700; font-size: 13px; text-decoration: underline;">
+                ${recipientEmail || 'accounts@zawrindustries.com'}
+              </a>
+              <div style="font-size: 12px; color: #5f6368; margin-top: 3px;">
+                [ZAWR EXECUTIVE] ${reportName} — ${frequency} Distribution (Automated Service)
+              </div>
+            </td>
+            <td align="right" valign="top" style="width: 70px; padding: 12px 0; font-size: 12px; font-weight: 600; color: #137333;">Delivered</td>
+          </tr>
+        </table>
+        <table role="presentation" width="100%" border="0" cellpadding="0" cellspacing="0" style="width: 100%; border-collapse: collapse; border-top: 1px solid #f0f0f0;">
+          <tr>
+            <td align="left" valign="top" style="width: 75px; padding: 12px 0; font-size: 12px; color: #5f6368;">${timeFormatted}</td>
+            <td align="left" valign="top" style="padding: 12px 14px;">
+              <a href="mailto:syedismail@zawrindustries.com" style="color: #1a73e8; font-weight: 700; font-size: 13px; text-decoration: underline;">
+                syedismail@zawrindustries.com
+              </a>
+              <div style="font-size: 12px; color: #5f6368; margin-top: 3px;">
+                [ZAWR EXECUTIVE] Financial Invariants & Audit Log Synchronization
+              </div>
+            </td>
+            <td align="right" valign="top" style="width: 70px; padding: 12px 0; font-size: 12px; font-weight: 600; color: #137333;">Delivered</td>
+          </tr>
+        </table>
+        <table role="presentation" width="100%" border="0" cellpadding="0" cellspacing="0" style="width: 100%; border-collapse: collapse; border-top: 1px solid #f0f0f0;">
+          <tr>
+            <td align="left" valign="top" style="width: 75px; padding: 12px 0; font-size: 12px; color: #5f6368;">${timeFormatted}</td>
+            <td align="left" valign="top" style="padding: 12px 14px;">
+              <a href="mailto:md@zawrindustries.com" style="color: #1a73e8; font-weight: 700; font-size: 13px; text-decoration: underline;">
+                md@zawrindustries.com
+              </a>
+              <div style="font-size: 12px; color: #5f6368; margin-top: 3px;">
+                [ZAWR EXECUTIVE] Executive Accounting & Ledger Digest
+              </div>
+            </td>
+            <td align="right" valign="top" style="width: 70px; padding: 12px 0; font-size: 12px; font-weight: 600; color: #137333;">Delivered</td>
+          </tr>
+        </table>
       `;
 
   // Section 3: Document Scans & Approvals
@@ -621,15 +629,17 @@ export function generateFinancialReportHtml(options: ReportGeneratorOptions): st
 <body style="margin: 0; padding: 30px 15px; background-color: #f7f7f7; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #111111;">
   <div style="max-width: 680px; margin: 0 auto; background-color: #ffffff; padding: 40px 36px; border: 1px solid #e0e0e0; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
     
-    <!-- Top Executive Header -->
-    <div style="display: flex; justify-content: space-between; align-items: baseline;">
-      <div style="font-size: 20px; letter-spacing: -0.3px;">
-        <strong style="color: #111111; font-weight: 900;">ZAWR</strong> <span style="font-weight: 300; color: #333333;">INDUSTRIES</span>
-      </div>
-      <div style="font-size: 11px; font-weight: 600; color: #5f6368; letter-spacing: 1.5px; text-transform: uppercase;">
-        EXECUTIVE FINANCIAL REPORT
-      </div>
-    </div>
+    <!-- Top Executive Header (Table-based for complete Gmail & Outlook email client compatibility) -->
+    <table role="presentation" width="100%" border="0" cellpadding="0" cellspacing="0" style="width: 100%; border-collapse: collapse;">
+      <tr>
+        <td align="left" valign="baseline" style="font-size: 20px; letter-spacing: -0.3px; line-height: 24px; padding: 0;">
+          <strong style="color: #111111; font-weight: 900;">ZAWR</strong>&nbsp;<span style="font-weight: 300; color: #333333;">INDUSTRIES</span>
+        </td>
+        <td align="right" valign="baseline" style="font-size: 11px; font-weight: 600; color: #5f6368; letter-spacing: 1.5px; text-transform: uppercase; white-space: nowrap; line-height: 24px; padding: 0;">
+          EXECUTIVE FINANCIAL REPORT
+        </td>
+      </tr>
+    </table>
     
     <div style="height: 1px; background-color: #ebebeb; margin-top: 14px; margin-bottom: 26px;"></div>
 
@@ -683,21 +693,25 @@ export function generateFinancialReportHtml(options: ReportGeneratorOptions): st
     <h2 style="font-size: 15px; font-weight: 700; color: #111111; margin: 32px 0 12px 0;">
       4. Action Items & Follow-up Tasks
     </h2>
-    <div style="border-top: 1px solid #f0f0f0; padding: 12px 0; margin-bottom: 26px;">
-      <div style="display: flex; align-items: flex-start; margin-bottom: 14px;">
-        <span style="display: inline-block; width: 55px; font-size: 12px; font-weight: 600; color: #137333;">Low</span>
-        <div>
-          <strong style="font-size: 13px; color: #111111;">Review posted vouchers and verify automated bank statement matching.</strong>
-          <div style="font-size: 12px; color: #666666; margin-top: 2px;">Routine automated ledger verification executed daily.</div>
-        </div>
-      </div>
-      <div style="display: flex; align-items: flex-start;">
-        <span style="display: inline-block; width: 55px; font-size: 12px; font-weight: 600; color: #1a73e8;">Normal</span>
-        <div>
-          <strong style="font-size: 13px; color: #111111;">Reconcile bank feeds against unposted journal entries.</strong>
-          <div style="font-size: 12px; color: #666666; margin-top: 2px;">Verify corporate bank balance before statutory tax settlement.</div>
-        </div>
-      </div>
+    <div style="border-top: 1px solid #f0f0f0; padding: 12px 0 6px 0; margin-bottom: 26px;">
+      <table role="presentation" width="100%" border="0" cellpadding="0" cellspacing="0" style="width: 100%; border-collapse: collapse; margin-bottom: 12px;">
+        <tr>
+          <td align="left" valign="top" style="width: 55px; font-size: 12px; font-weight: 600; color: #137333; line-height: 18px;">Low</td>
+          <td align="left" valign="top">
+            <strong style="font-size: 13px; color: #111111; line-height: 18px;">Review posted vouchers and verify automated bank statement matching.</strong>
+            <div style="font-size: 12px; color: #666666; margin-top: 2px;">Routine automated ledger verification executed daily.</div>
+          </td>
+        </tr>
+      </table>
+      <table role="presentation" width="100%" border="0" cellpadding="0" cellspacing="0" style="width: 100%; border-collapse: collapse;">
+        <tr>
+          <td align="left" valign="top" style="width: 55px; font-size: 12px; font-weight: 600; color: #1a73e8; line-height: 18px;">Normal</td>
+          <td align="left" valign="top">
+            <strong style="font-size: 13px; color: #111111; line-height: 18px;">Reconcile bank feeds against unposted journal entries.</strong>
+            <div style="font-size: 12px; color: #666666; margin-top: 2px;">Verify corporate bank balance before statutory tax settlement.</div>
+          </td>
+        </tr>
+      </table>
     </div>
 
     <!-- Section 5: System Telemetry & Perimeter Defense -->
@@ -723,15 +737,19 @@ export function generateFinancialReportHtml(options: ReportGeneratorOptions): st
       </tr>
     </table>
 
-    <div style="font-size: 13px; font-weight: 600; color: #c5221f; margin-top: 16px; margin-bottom: 6px;">
+    <div style="font-size: 13px; font-weight: 600; color: #c5221f; margin-top: 16px; margin-bottom: 8px;">
       Recent Security Telemetry
     </div>
-    <div style="display: flex; justify-content: space-between; font-size: 12px; color: #333333; line-height: 1.45;">
-      <div>
-        <strong>Perimeter Defense Normal</strong> — Zero unauthorized mutations or imbalanced transactions detected across protected ledgers.
-      </div>
-      <div style="color: #666666; margin-left: 12px; white-space: nowrap;">${timeFormatted}</div>
-    </div>
+    <table role="presentation" width="100%" border="0" cellpadding="0" cellspacing="0" style="width: 100%; border-collapse: collapse;">
+      <tr>
+        <td align="left" valign="top" style="font-size: 12px; color: #333333; line-height: 1.45;">
+          <strong>Perimeter Defense Normal</strong> — Zero unauthorized mutations or imbalanced transactions detected across protected ledgers.
+        </td>
+        <td align="right" valign="top" style="width: 75px; font-size: 12px; color: #666666; white-space: nowrap; padding-left: 12px;">
+          ${timeFormatted}
+        </td>
+      </tr>
+    </table>
 
     <!-- Sign-off -->
     <div style="margin-top: 36px; font-size: 13px; color: #555555; line-height: 1.6;">

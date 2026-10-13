@@ -38,8 +38,7 @@ describe('Zawr Industries Executive Email & Excel Report Generator', () => {
       expect(html).toContain('2. Financial Performance & Visual Trajectory');
       expect(html).toContain('MAX. ACHIEVED ↑');
       expect(html).toContain('3. Working Capital & Liquid Cash Reserves');
-      expect(html).toContain('4. Material Invoices & Trade Counterparties');
-      expect(html).toContain('5. Statutory Tax & Accounting Invariant Assurance');
+      expect(html).toContain('4. Statutory Tax & Accounting Invariant Assurance');
       expect(html).toContain('Double-Entry Equilibrium Invariant');
       expect(html).toContain('zawrindustries.com');
       expect(html).toContain('accounts@zawrindustries.com');

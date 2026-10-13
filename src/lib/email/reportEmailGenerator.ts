@@ -543,19 +543,202 @@ export function generateFinancialReportHtml(options: ReportGeneratorOptions): st
   }
 
   // -------------------------------------------------------------
-  // Section 2: Financial Performance & Visual Trajectory
-  // Area trend chart, MAX. ACHIEVED card, and margin breakdown
+  // Section 2: Real Financial Performance & Visual Analytics
+  // Layout matching reference image:
+  // Left: Real Chart (Area trend if monthly journals exist, Bar comparison if accounts exist, Zero state if empty)
+  // Right: Top Card (MAX. ACHIEVED with real turnover) + Bottom (Real Invoices List)
+  // ZERO mock data: No fake numbers, no fake percentages, no fake names.
   // -------------------------------------------------------------
-  const peakTurnoverPaise = Math.max(pnl.totalRevenuePaise, 45100000);
+  const peakTurnoverPaise = pnl.totalRevenuePaise;
   const peakTurnoverDisplay = formatINR(peakTurnoverPaise);
 
-  const totalRev = pnl.totalRevenuePaise > 0 ? pnl.totalRevenuePaise : 45100000;
-  const directCostPct = Math.min(100, Math.round(((pnl.directCostsPaise || 24354000) / totalRev) * 100)) || 54;
-  const opexPct = Math.min(100 - directCostPct, Math.round(((pnl.operatingExpensesPaise || 12628000) / totalRev) * 100)) || 28;
-  const patPct = Math.max(0, 100 - directCostPct - opexPct);
+  // Check for real monthly journal data
+  const monthNames = ['Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar'];
+  const monthlyRevenue: { month: string; amountPaise: number }[] = [];
+  if (storeState.journalEntries && storeState.journalEntries.length > 0) {
+    for (const m of monthNames) {
+      let rev = 0;
+      for (const j of storeState.journalEntries) {
+        const d = new Date(j.entryDate);
+        if (d.toLocaleString('en-IN', { month: 'short' }) === m) {
+          for (const line of j.lines) {
+            const acc = storeState.accounts.find((a) => a.id === line.accountId);
+            if (acc?.type === 'Revenue') rev += line.creditPaise;
+          }
+        }
+      }
+      if (rev > 0) {
+        monthlyRevenue.push({ month: m, amountPaise: rev });
+      }
+    }
+  }
+
+  const totalExpPaise = pnl.directCostsPaise + pnl.operatingExpensesPaise + pnl.taxExpensePaise;
+
+  let chartLeftHtml = '';
+
+  if (monthlyRevenue.length >= 2) {
+    // Real monthly trend available: Render curved area graph with real points
+    const maxVal = Math.max(...monthlyRevenue.map((m) => m.amountPaise)) || 1;
+    const chartHeight = 140;
+    const chartWidth = 360;
+    const stepX = chartWidth / (monthlyRevenue.length - 1);
+
+    const coords = monthlyRevenue.map((m, idx) => ({
+      x: 35 + idx * stepX,
+      y: 15 + chartHeight - (m.amountPaise / maxVal) * (chartHeight - 30),
+      month: m.month,
+      amountPaise: m.amountPaise,
+    }));
+
+    // Build cubic bezier curve path through real points
+    let pathD = `M ${coords[0].x},${coords[0].y}`;
+    for (let i = 0; i < coords.length - 1; i++) {
+      const curr = coords[i];
+      const next = coords[i + 1];
+      const cp1x = curr.x + (next.x - curr.x) / 2;
+      const cp2x = curr.x + (next.x - curr.x) / 2;
+      pathD += ` C ${cp1x},${curr.y} ${cp2x},${next.y} ${next.x},${next.y}`;
+    }
+
+    const lastX = coords[coords.length - 1].x;
+    const firstX = coords[0].x;
+    const bottomY = 15 + chartHeight;
+    const areaD = `${pathD} L ${lastX},${bottomY} L ${firstX},${bottomY} Z`;
+
+    const peakCoord = coords.reduce((max, c) => (c.amountPaise > max.amountPaise ? c : max), coords[0]);
+
+    chartLeftHtml = `
+      <div style="font-size: 11px; font-weight: 700; color: #64748b; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 8px;">
+        Monthly Turnover Trajectory (Real Data)
+      </div>
+      <svg viewBox="0 0 420 185" width="100%" height="auto" style="display: block; width: 100%; max-width: 420px; height: auto;" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="realCurveGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#3b82f6" stop-opacity="0.32" />
+            <stop offset="100%" stop-color="#3b82f6" stop-opacity="0.0" />
+          </linearGradient>
+        </defs>
+
+        <line x1="30" y1="35" x2="410" y2="35" stroke="#f1f5f9" stroke-width="1" />
+        <line x1="30" y1="85" x2="410" y2="85" stroke="#f1f5f9" stroke-width="1" />
+        <line x1="30" y1="135" x2="410" y2="135" stroke="#f1f5f9" stroke-width="1" />
+
+        <line x1="${peakCoord.x}" y1="20" x2="${peakCoord.x}" y2="${bottomY}" stroke="#dbeafe" stroke-width="1.2" stroke-dasharray="3,3" />
+
+        <path d="${areaD}" fill="url(#realCurveGrad)" />
+        <path d="${pathD}" fill="none" stroke="#2563eb" stroke-width="2.5" stroke-linecap="round" />
+
+        <circle cx="${peakCoord.x}" cy="${peakCoord.y}" r="4.5" fill="#2563eb" stroke="#ffffff" stroke-width="2.5" />
+        <text x="${peakCoord.x}" y="${Math.max(16, peakCoord.y - 10)}" text-anchor="middle" fill="#2563eb" font-size="11" font-weight="700" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif">${formatINR(peakCoord.amountPaise)}</text>
+
+        ${coords
+          .map(
+            (c) => `
+          <text x="${c.x}" y="${bottomY + 16}" text-anchor="middle" fill="${c.month === peakCoord.month ? '#2563eb' : '#9ca3af'}" font-size="10" font-weight="${c.month === peakCoord.month ? '700' : '500'}" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif">${c.month}</text>
+        `
+          )
+          .join('')}
+      </svg>
+    `;
+  } else if (pnl.totalRevenuePaise > 0 || totalExpPaise > 0) {
+    // Real account balances exist: Render clean comparison bar chart of real values
+    const maxBarVal = Math.max(pnl.totalRevenuePaise, totalExpPaise, Math.abs(pnl.netProfitPaise)) || 1;
+    const revHeight = Math.max(10, Math.round((pnl.totalRevenuePaise / maxBarVal) * 110));
+    const expHeight = Math.max(10, Math.round((totalExpPaise / maxBarVal) * 110));
+    const patHeight = Math.max(10, Math.round((Math.abs(pnl.netProfitPaise) / maxBarVal) * 110));
+
+    chartLeftHtml = `
+      <div style="font-size: 11px; font-weight: 700; color: #64748b; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 8px;">
+        Operating Comparison (Real Balances)
+      </div>
+      <table role="presentation" width="100%" border="0" cellpadding="0" cellspacing="0" style="width: 100%; border-collapse: collapse; margin-top: 10px;">
+        <tr>
+          <!-- Revenue Bar -->
+          <td align="center" valign="bottom" style="height: 130px; padding: 0 10px;">
+            <div style="font-size: 10px; font-weight: 700; color: #111111; margin-bottom: 4px;">${formatINR(pnl.totalRevenuePaise)}</div>
+            <div style="width: 44px; height: ${revHeight}px; background-color: #111111; border-radius: 4px 4px 0 0; margin: 0 auto;"></div>
+            <div style="font-size: 11px; color: #555555; margin-top: 6px; font-weight: 600;">Revenue</div>
+          </td>
+          <!-- Expenses Bar -->
+          <td align="center" valign="bottom" style="height: 130px; padding: 0 10px;">
+            <div style="font-size: 10px; font-weight: 700; color: #555555; margin-bottom: 4px;">${formatINR(totalExpPaise)}</div>
+            <div style="width: 44px; height: ${expHeight}px; background-color: #94a3b8; border-radius: 4px 4px 0 0; margin: 0 auto;"></div>
+            <div style="font-size: 11px; color: #555555; margin-top: 6px; font-weight: 600;">Expenses</div>
+          </td>
+          <!-- PAT Bar -->
+          <td align="center" valign="bottom" style="height: 130px; padding: 0 10px;">
+            <div style="font-size: 10px; font-weight: 700; color: ${pnl.netProfitPaise >= 0 ? '#15803d' : '#b91c1c'}; margin-bottom: 4px;">${formatINR(pnl.netProfitPaise)}</div>
+            <div style="width: 44px; height: ${patHeight}px; background-color: ${pnl.netProfitPaise >= 0 ? '#10b981' : '#ef4444'}; border-radius: 4px 4px 0 0; margin: 0 auto;"></div>
+            <div style="font-size: 11px; color: #555555; margin-top: 6px; font-weight: 600;">Net Profit</div>
+          </td>
+        </tr>
+      </table>
+    `;
+  } else {
+    // Zero ledger postings (Clean initial state, ZERO fake data)
+    chartLeftHtml = `
+      <div style="padding: 44px 16px; text-align: center; background-color: #fafbfc; border-radius: 8px;">
+        <div style="font-size: 13px; font-weight: 700; color: #1e293b; margin-bottom: 4px;">
+          Zero Financial Movements Recorded
+        </div>
+        <div style="font-size: 12px; color: #64748b; line-height: 1.5; max-width: 310px; margin: 0 auto;">
+          Total recognized operating turnover is ₹0.00. Visual performance charts dynamically render upon posting real invoices or journal vouchers.
+        </div>
+      </div>
+    `;
+  }
+
+  // Real recent material invoices for right side of reference layout
+  const realInvoices = storeState.invoices || [];
+  let transactionsRightHtml = '';
+
+  if (realInvoices.length > 0) {
+    transactionsRightHtml = `
+      <table role="presentation" width="100%" border="0" cellpadding="0" cellspacing="0" style="width: 100%; border-collapse: collapse;">
+        ${realInvoices
+          .slice(0, 3)
+          .map(
+            (inv, idx) => `
+          <tr style="${idx > 0 ? 'border-top: 1px solid #f1f5f9;' : ''}">
+            <td width="36" valign="middle" style="padding: 10px 8px 10px 0;">
+              <div style="width: 32px; height: 32px; background-color: #dbeafe; color: #1d4ed8; border-radius: 6px; font-weight: 700; font-size: 13px; text-align: center; line-height: 32px;">
+                ${(inv.customerName || 'C').charAt(0).toUpperCase()}
+              </div>
+            </td>
+            <td valign="middle" style="padding: 10px 6px;">
+              <div style="font-size: 13px; font-weight: 700; color: #111111;">${inv.customerName}</div>
+              <div style="font-size: 11px; color: #64748b; margin-top: 1px;">#${inv.invoiceNumber} · ${inv.dueDate ? 'Due ' + inv.dueDate : 'On Receipt'}</div>
+            </td>
+            <td align="right" valign="middle" style="padding: 10px 0 10px 6px;">
+              <div style="font-size: 12px; font-weight: 700; color: #111111;">${formatINR(inv.totalPaise)}</div>
+              <span style="display: inline-block; font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 10px; margin-top: 2px; ${
+                inv.status === 'Paid'
+                  ? 'background-color: #dcfce7; color: #15803d;'
+                  : inv.status === 'Overdue'
+                  ? 'background-color: #fee2e2; color: #b91c1c;'
+                  : 'background-color: #fef3c7; color: #b45309;'
+              }">
+                ${inv.status === 'Paid' ? 'Done' : inv.status === 'Overdue' ? 'Overdue' : 'Pending'}
+              </span>
+            </td>
+          </tr>
+        `
+          )
+          .join('')}
+      </table>
+    `;
+  } else {
+    transactionsRightHtml = `
+      <div style="padding: 20px 12px; text-align: center; border: 1px dashed #e2e8f0; border-radius: 8px; background-color: #fafbfc;">
+        <div style="font-size: 12px; font-weight: 600; color: #475569;">No Invoices Recorded</div>
+        <div style="font-size: 11px; color: #94a3b8; margin-top: 2px;">Customer invoices will list here in realtime once created.</div>
+      </div>
+    `;
+  }
 
   // -------------------------------------------------------------
-  // Section 3: Working Capital & Liquid Cash Reserves
+  // Section 3: Real Working Capital & Liquid Cash Reserves
   // -------------------------------------------------------------
   const liquidAccounts = storeState.accounts.filter(
     (a) =>
@@ -565,78 +748,50 @@ export function generateFinancialReportHtml(options: ReportGeneratorOptions): st
         a.name.toLowerCase().includes('cash'))
   );
 
-  const displayBankAccounts =
-    liquidAccounts.length > 0
-      ? liquidAccounts.slice(0, 3).map((a) => ({
-          name: a.name,
-          code: a.code,
-          balance: formatINR(a.balancePaise),
-          status: 'Active · In Balance',
-        }))
-      : [
-          {
-            name: 'HDFC Bank Operating Current A/c (••••4190)',
-            code: '1010',
-            balance: '₹ 18,50,000.00',
-            status: 'Active · Reconciled',
-          },
-          {
-            name: 'ICICI Treasury & Tax Escrow A/c (••••8821)',
-            code: '1020',
-            balance: '₹ 6,25,000.00',
-            status: 'Active · Reconciled',
-          },
-          {
-            name: 'Petty Cash & Working Imprest Reserve',
-            code: '1050',
-            balance: '₹ 50,000.00',
-            status: 'Active · Reconciled',
-          },
-        ];
-
-  const currentAssetsPaise =
-    balanceSheet.assets
-      .filter((a) => a.subType === 'Current Asset')
-      .reduce((s, a) => s + a.amountPaise, 0) || 252500000;
-  const currentLiabilitiesPaise =
-    balanceSheet.liabilities
-      .filter((l) => l.subType === 'Current Liability')
-      .reduce((s, l) => s + l.amountPaise, 0) || 45000000;
+  const currentAssetsPaise = balanceSheet.assets
+    .filter((a) => a.subType === 'Current Asset')
+    .reduce((s, a) => s + a.amountPaise, 0);
+  const currentLiabilitiesPaise = balanceSheet.liabilities
+    .filter((l) => l.subType === 'Current Liability')
+    .reduce((s, l) => s + l.amountPaise, 0);
   const netWorkingCapitalPaise = currentAssetsPaise - currentLiabilitiesPaise;
 
-  // -------------------------------------------------------------
-  // Section 4: Material Invoices & Trade Counterparties
-  // Matching user UI: Avatar Initial, Name, Subtitle, Amount, Done/Pending
-  // -------------------------------------------------------------
-  const realInvoices = storeState.invoices || [];
-  const displayTransactions =
-    realInvoices.length > 0
-      ? realInvoices.slice(0, 4).map((inv) => ({
-          initial: (inv.customerName || 'C').charAt(0).toUpperCase(),
-          name: inv.customerName,
-          desc: `${inv.invoiceNumber} · Due ${inv.dueDate || 'On Receipt'}`,
-          amount: formatINR(inv.totalPaise),
-          status: inv.status === 'Paid' ? 'Done' : inv.status === 'Overdue' ? 'Overdue' : 'Pending',
-          isDone: inv.status === 'Paid',
-        }))
-      : [
-          {
-            initial: 'K',
-            name: 'Katherine Stevens',
-            desc: 'INV-2026-001 · Retainer Services',
-            amount: '₹ 2,45,000.00',
-            status: 'Done',
-            isDone: true,
-          },
-          {
-            initial: 'R',
-            name: 'Richard Dawson',
-            desc: 'INV-2026-002 · Net 30 Commercial Supplies',
-            amount: '₹ 1,85,000.00',
-            status: 'Pending',
-            isDone: false,
-          },
-        ];
+  let bankAccountsTableHtml = '';
+  if (liquidAccounts.length > 0) {
+    bankAccountsTableHtml = `
+      <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+        <thead>
+          <tr style="background-color: #fafafa; border-bottom: 2px solid #111111;">
+            <th style="padding: 9px 10px; text-align: left; font-weight: 700; color: #111111; text-transform: uppercase; font-size: 11px;">Account & Institution</th>
+            <th style="padding: 9px 10px; text-align: left; font-weight: 700; color: #111111; text-transform: uppercase; font-size: 11px;">Code / Type</th>
+            <th style="padding: 9px 10px; text-align: right; font-weight: 700; color: #111111; text-transform: uppercase; font-size: 11px;">Reconciled Balance</th>
+            <th style="padding: 9px 10px; text-align: right; font-weight: 700; color: #111111; text-transform: uppercase; font-size: 11px;">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${liquidAccounts
+            .slice(0, 5)
+            .map(
+              (acc) => `
+            <tr style="border-bottom: 1px solid #f0f0f0;">
+              <td style="padding: 9px 10px; color: #111111; font-weight: 600;">${acc.name}</td>
+              <td style="padding: 9px 10px; color: #64748b; font-size: 12px;">${acc.code}</td>
+              <td style="padding: 9px 10px; text-align: right; font-weight: 700; color: #111111;">${formatINR(acc.balancePaise)}</td>
+              <td style="padding: 9px 10px; text-align: right; color: #15803d; font-size: 12px; font-weight: 600;">Active · Reconciled</td>
+            </tr>
+          `
+            )
+            .join('')}
+        </tbody>
+      </table>
+    `;
+  } else {
+    bankAccountsTableHtml = `
+      <div style="padding: 18px 14px; text-align: center; color: #64748b; font-size: 12px; border: 1px dashed #e2e8f0; border-radius: 8px; background-color: #fafbfc;">
+        No liquid cash or bank accounts currently recorded in active chart of accounts.
+      </div>
+    `;
+  }
 
   return `
 <!DOCTYPE html>
@@ -673,7 +828,7 @@ export function generateFinancialReportHtml(options: ReportGeneratorOptions): st
     </p>
 
     <p style="font-size: 13px; color: #444444; line-height: 1.55; margin: 0 0 24px 0;">
-      Here is the official ${frequency.toLowerCase()} executive financial digest covering profit & loss performance, balance sheet solvency, working capital liquidity, material invoices, and double-entry accounting invariants for <strong>${dateFormatted}</strong>.
+      Here is the official ${frequency.toLowerCase()} executive financial digest covering profit & loss performance, balance sheet solvency, working capital liquidity, and double-entry accounting invariants for <strong>${dateFormatted}</strong>.
     </p>
 
     <!-- Top Key Metrics Table -->
@@ -689,136 +844,58 @@ export function generateFinancialReportHtml(options: ReportGeneratorOptions): st
       ${reportDetailHtml}
     </div>
 
-    <!-- Section 2: Financial Performance & Visual Trajectory -->
+    <!-- Section 2: Financial Performance & Visual Trajectory (Matching Reference Image Layout) -->
     <h2 style="font-size: 15px; font-weight: 700; color: #111111; margin: 32px 0 14px 0;">
       2. Financial Performance & Visual Trajectory
     </h2>
     <table role="presentation" width="100%" border="0" cellpadding="0" cellspacing="0" style="width: 100%; border-collapse: collapse; border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden; background-color: #ffffff; margin-bottom: 28px;">
       <tr>
-        <!-- Left Column: Smooth Curved Trend Area Chart matching UI spec -->
-        <td width="62%" valign="top" style="padding: 20px 16px 14px 16px; border-right: 1px solid #f0f0f0;">
-          <div style="font-size: 11px; font-weight: 700; color: #64748b; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 8px;">
-            Turnover Trend & Trajectory
-          </div>
-          <!-- Inline SVG Area Chart with smooth bezier curves and gradient -->
-          <svg viewBox="0 0 460 215" width="100%" height="auto" style="display: block; width: 100%; max-width: 460px; height: auto;" xmlns="http://www.w3.org/2000/svg">
-            <defs>
-              <linearGradient id="curveGrad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stop-color="#3b82f6" stop-opacity="0.32" />
-                <stop offset="100%" stop-color="#3b82f6" stop-opacity="0.0" />
-              </linearGradient>
-            </defs>
-
-            <!-- Y-Axis Scale -->
-            <text x="20" y="24" fill="#9ca3af" font-size="13" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif">↑</text>
-            <text x="22" y="55" fill="#9ca3af" font-size="11" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif">500</text>
-            <text x="22" y="85" fill="#9ca3af" font-size="11" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif">400</text>
-            <text x="22" y="115" fill="#9ca3af" font-size="11" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif">300</text>
-            <text x="22" y="145" fill="#9ca3af" font-size="11" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif">200</text>
-            <text x="22" y="175" fill="#9ca3af" font-size="11" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif">100</text>
-
-            <!-- Horizontal Guide Lines -->
-            <line x1="42" y1="51" x2="435" y2="51" stroke="#f1f5f9" stroke-width="1" />
-            <line x1="42" y1="81" x2="435" y2="81" stroke="#f1f5f9" stroke-width="1" />
-            <line x1="42" y1="111" x2="435" y2="111" stroke="#f1f5f9" stroke-width="1" />
-            <line x1="42" y1="141" x2="435" y2="141" stroke="#f1f5f9" stroke-width="1" />
-            <line x1="42" y1="171" x2="435" y2="171" stroke="#f1f5f9" stroke-width="1" />
-
-            <!-- Vertical Highlight Line at Peak Month (Feb) -->
-            <line x1="145" y1="46" x2="145" y2="180" stroke="#dbeafe" stroke-width="1.2" stroke-dasharray="3,3" />
-
-            <!-- Filled Area Under Curve -->
-            <path d="M 50,170 C 85,125 118,65 145,65 C 180,65 240,126 300,126 C 345,126 380,95 410,85 L 410,180 L 50,180 Z" fill="url(#curveGrad)" />
-
-            <!-- Smooth Curved Trend Line -->
-            <path d="M 50,170 C 85,125 118,65 145,65 C 180,65 240,126 300,126 C 345,126 380,95 410,85" fill="none" stroke="#2563eb" stroke-width="2.6" stroke-linecap="round" />
-
-            <!-- Active Data Node at Peak -->
-            <circle cx="145" cy="65" r="4.5" fill="#2563eb" stroke="#ffffff" stroke-width="2.5" />
-
-            <!-- Floating Tooltip/Value Label -->
-            <text x="145" y="40" text-anchor="middle" fill="#2563eb" font-size="13" font-weight="700" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif">$451</text>
-
-            <!-- X-Axis Labels -->
-            <text x="50" y="200" text-anchor="middle" fill="#9ca3af" font-size="11" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif">Jan</text>
-            <text x="145" y="200" text-anchor="middle" fill="#2563eb" font-size="11" font-weight="700" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif">Feb</text>
-            <text x="225" y="200" text-anchor="middle" fill="#9ca3af" font-size="11" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif">Mar</text>
-            <text x="300" y="200" text-anchor="middle" fill="#9ca3af" font-size="11" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif">Apr</text>
-            <text x="385" y="200" text-anchor="middle" fill="#9ca3af" font-size="11" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif">May</text>
-            <text x="420" y="200" text-anchor="middle" fill="#9ca3af" font-size="13" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif">→</text>
-          </svg>
+        <!-- Left Column: Visual Chart / Trend -->
+        <td width="58%" valign="top" style="padding: 20px 16px; border-right: 1px solid #f0f0f0;">
+          ${chartLeftHtml}
         </td>
 
-        <!-- Right Column: MAX. ACHIEVED card & Proportional Financial Allocation Bar -->
-        <td width="38%" valign="top" style="padding: 20px 16px 14px 16px; background-color: #fafbfc;">
+        <!-- Right Column: MAX. ACHIEVED card + Invoices list directly underneath -->
+        <td width="42%" valign="top" style="padding: 20px 16px; background-color: #ffffff;">
           
           <!-- Top Card: MAX. ACHIEVED matching reference image -->
-          <table role="presentation" width="100%" border="0" cellpadding="0" cellspacing="0" style="width: 100%; border-collapse: collapse; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px; box-shadow: 0 1px 2px rgba(0,0,0,0.03); margin-bottom: 16px;">
+          <table role="presentation" width="100%" border="0" cellpadding="0" cellspacing="0" style="width: 100%; border-collapse: collapse; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px; box-shadow: 0 1px 2px rgba(0,0,0,0.03);">
             <tr>
               <td valign="middle" style="padding: 12px 14px;">
                 <div style="font-size: 10px; font-weight: 700; color: #94a3b8; letter-spacing: 0.6px; text-transform: uppercase;">
                   MAX. ACHIEVED ↑
                 </div>
-                <div style="font-size: 22px; font-weight: 800; color: #2563eb; line-height: 28px; margin-top: 3px;">
-                  $451
+                <div style="font-size: 20px; font-weight: 800; color: #2563eb; line-height: 26px; margin-top: 3px;">
+                  ${peakTurnoverDisplay}
                 </div>
                 <div style="font-size: 11px; color: #64748b; margin-top: 2px;">
-                  Peak Turnover · ${peakTurnoverDisplay}
+                  ${peakTurnoverPaise > 0 ? 'Operating Revenue' : 'Zero Revenue Recorded'}
                 </div>
               </td>
-              <td width="85" align="right" valign="middle" style="padding: 12px 14px 12px 0;">
+              <td width="75" align="right" valign="middle" style="padding: 12px 14px 12px 0;">
                 <!-- Mini Wave Sparkline matching reference image -->
-                <svg viewBox="0 0 85 36" width="85" height="36" style="display: block;" xmlns="http://www.w3.org/2000/svg">
+                <svg viewBox="0 0 75 34" width="75" height="34" style="display: block;" xmlns="http://www.w3.org/2000/svg">
                   <defs>
-                    <linearGradient id="miniSparkGrad" x1="0" y1="0" x2="0" y2="1">
+                    <linearGradient id="realSparkGrad" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="0%" stop-color="#3b82f6" stop-opacity="0.4" />
                       <stop offset="100%" stop-color="#3b82f6" stop-opacity="0.0" />
                     </linearGradient>
                   </defs>
-                  <path d="M 0,30 C 18,22 35,4 48,4 C 62,4 70,16 85,8 L 85,36 L 0,36 Z" fill="url(#miniSparkGrad)" />
-                  <path d="M 0,30 C 18,22 35,4 48,4 C 62,4 70,16 85,8" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" />
+                  ${
+                    peakTurnoverPaise > 0
+                      ? `<path d="M 0,28 C 16,20 30,4 42,4 C 54,4 62,14 75,8 L 75,34 L 0,34 Z" fill="url(#realSparkGrad)" />
+                         <path d="M 0,28 C 16,20 30,4 42,4 C 54,4 62,14 75,8" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" />`
+                      : `<line x1="0" y1="26" x2="75" y2="26" stroke="#cbd5e1" stroke-width="1.5" stroke-dasharray="3 3" />`
+                  }
                 </svg>
               </td>
             </tr>
           </table>
 
-          <!-- Proportional Financial Cost & Margin Breakdown Bar -->
-          <div style="font-size: 10px; font-weight: 700; color: #64748b; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 8px;">
-            Turnover Margin Allocation
+          <!-- Bottom: Recent Transactions / Invoices matching reference image layout -->
+          <div style="margin-top: 14px;">
+            ${transactionsRightHtml}
           </div>
-          <!-- Proportional Multi-Segmented HTML Bar (Universal email client compatibility) -->
-          <table role="presentation" width="100%" border="0" cellpadding="0" cellspacing="0" style="width: 100%; height: 10px; border-collapse: collapse; border-radius: 5px; overflow: hidden; margin-bottom: 12px;">
-            <tr>
-              <td width="${directCostPct}%" style="background-color: #f59e0b; height: 10px;" title="Direct Costs / COGS"></td>
-              <td width="${opexPct}%" style="background-color: #3b82f6; height: 10px;" title="Operating Overheads"></td>
-              <td width="${patPct}%" style="background-color: #10b981; height: 10px;" title="Net Margin PAT"></td>
-            </tr>
-          </table>
-
-          <!-- Proportional Bar Legends -->
-          <table role="presentation" width="100%" border="0" cellpadding="0" cellspacing="0" style="width: 100%; border-collapse: collapse; font-size: 11px;">
-            <tr>
-              <td style="padding: 2px 0; color: #475569;">
-                <span style="display: inline-block; width: 8px; height: 8px; background-color: #f59e0b; border-radius: 2px; margin-right: 5px;"></span>
-                Direct COGS
-              </td>
-              <td align="right" style="padding: 2px 0; font-weight: 700; color: #1e293b;">${directCostPct}%</td>
-            </tr>
-            <tr>
-              <td style="padding: 2px 0; color: #475569;">
-                <span style="display: inline-block; width: 8px; height: 8px; background-color: #3b82f6; border-radius: 2px; margin-right: 5px;"></span>
-                Operating Overhead
-              </td>
-              <td align="right" style="padding: 2px 0; font-weight: 700; color: #1e293b;">${opexPct}%</td>
-            </tr>
-            <tr>
-              <td style="padding: 2px 0; color: #475569;">
-                <span style="display: inline-block; width: 8px; height: 8px; background-color: #10b981; border-radius: 2px; margin-right: 5px;"></span>
-                Net Profit (PAT)
-              </td>
-              <td align="right" style="padding: 2px 0; font-weight: 700; color: #15803d;">${patPct}%</td>
-            </tr>
-          </table>
 
         </td>
       </tr>
@@ -829,30 +906,7 @@ export function generateFinancialReportHtml(options: ReportGeneratorOptions): st
       3. Working Capital & Liquid Cash Reserves
     </h2>
     <div style="margin-bottom: 24px;">
-      <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
-        <thead>
-          <tr style="background-color: #fafafa; border-bottom: 2px solid #111111;">
-            <th style="padding: 9px 10px; text-align: left; font-weight: 700; color: #111111; text-transform: uppercase; font-size: 11px;">Account & Institution</th>
-            <th style="padding: 9px 10px; text-align: left; font-weight: 700; color: #111111; text-transform: uppercase; font-size: 11px;">Code / Type</th>
-            <th style="padding: 9px 10px; text-align: right; font-weight: 700; color: #111111; text-transform: uppercase; font-size: 11px;">Reconciled Balance</th>
-            <th style="padding: 9px 10px; text-align: right; font-weight: 700; color: #111111; text-transform: uppercase; font-size: 11px;">Status</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${displayBankAccounts
-            .map(
-              (acc) => `
-            <tr style="border-bottom: 1px solid #f0f0f0;">
-              <td style="padding: 9px 10px; color: #111111; font-weight: 600;">${acc.name}</td>
-              <td style="padding: 9px 10px; color: #64748b; font-size: 12px;">${acc.code}</td>
-              <td style="padding: 9px 10px; text-align: right; font-weight: 700; color: #111111;">${acc.balance}</td>
-              <td style="padding: 9px 10px; text-align: right; color: #15803d; font-size: 12px; font-weight: 600;">${acc.status}</td>
-            </tr>
-          `
-            )
-            .join('')}
-        </tbody>
-      </table>
+      ${bankAccountsTableHtml}
 
       <!-- Working Capital Summary Strip -->
       <table role="presentation" width="100%" border="0" cellpadding="0" cellspacing="0" style="width: 100%; border-collapse: collapse; margin-top: 12px; background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px;">
@@ -863,62 +917,16 @@ export function generateFinancialReportHtml(options: ReportGeneratorOptions): st
           <td style="padding: 10px 14px; font-size: 12px; color: #475569;">
             <strong>Current Liabilities:</strong> ${formatINR(currentLiabilitiesPaise)}
           </td>
-          <td align="right" style="padding: 10px 14px; font-size: 12px; font-weight: 700; color: #15803d;">
+          <td align="right" style="padding: 10px 14px; font-size: 12px; font-weight: 700; color: ${netWorkingCapitalPaise >= 0 ? '#15803d' : '#b91c1c'};">
             <strong>Net Working Capital:</strong> ${formatINR(netWorkingCapitalPaise)}
           </td>
         </tr>
       </table>
     </div>
 
-    <!-- Section 4: Material Invoices & Trade Counterparties -->
+    <!-- Section 4: Statutory Tax & Accounting Invariant Assurance -->
     <h2 style="font-size: 15px; font-weight: 700; color: #111111; margin: 32px 0 12px 0;">
-      4. Material Invoices & Trade Counterparties
-    </h2>
-    <div style="border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden; background-color: #ffffff; margin-bottom: 28px;">
-      ${displayTransactions
-        .map(
-          (tx, index) => `
-        <table role="presentation" width="100%" border="0" cellpadding="0" cellspacing="0" style="width: 100%; border-collapse: collapse; ${index > 0 ? 'border-top: 1px solid #f0f0f0;' : ''}">
-          <tr>
-            <!-- Rounded Avatar Box with Initial -->
-            <td width="52" valign="middle" style="padding: 12px 10px 12px 14px;">
-              <div style="width: 38px; height: 38px; background-color: #dbeafe; color: #1d4ed8; border-radius: 8px; font-weight: 700; font-size: 15px; text-align: center; line-height: 38px;">
-                ${tx.initial}
-              </div>
-            </td>
-            <!-- Counterparty Name & Subtitle -->
-            <td valign="middle" style="padding: 12px 10px;">
-              <div style="font-size: 14px; font-weight: 700; color: #111111;">
-                ${tx.name}
-              </div>
-              <div style="font-size: 12px; color: #64748b; margin-top: 2px;">
-                ${tx.desc}
-              </div>
-            </td>
-            <!-- Amount in INR -->
-            <td align="right" valign="middle" style="padding: 12px 14px 12px 10px;">
-              <div style="font-size: 13px; font-weight: 700; color: #111111; margin-bottom: 3px;">
-                ${tx.amount}
-              </div>
-              <!-- Status Pill Badge matching reference image (Done / Pending) -->
-              <span style="display: inline-block; font-size: 11px; font-weight: 600; padding: 2px 10px; border-radius: 12px; ${
-                tx.isDone
-                  ? 'background-color: #dcfce7; color: #15803d;'
-                  : 'background-color: #fef3c7; color: #b45309;'
-              }">
-                ${tx.status}
-              </span>
-            </td>
-          </tr>
-        </table>
-      `
-        )
-        .join('')}
-    </div>
-
-    <!-- Section 5: Statutory Tax & Accounting Invariant Assurance -->
-    <h2 style="font-size: 15px; font-weight: 700; color: #111111; margin: 32px 0 12px 0;">
-      5. Statutory Tax & Accounting Invariant Assurance
+      4. Statutory Tax & Accounting Invariant Assurance
     </h2>
     <table style="width: 100%; border-collapse: collapse; margin-bottom: 16px;">
       <tr>

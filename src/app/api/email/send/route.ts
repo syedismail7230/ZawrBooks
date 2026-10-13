@@ -26,15 +26,19 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
 
-    // If reportType is provided, automatically generate the executive HTML and Excel attachment
-    if (body.reportType) {
+    const isReportDispatch = body.reportType || body.reportName || body.subject?.includes('Report') || !body.isRawEmail;
+
+    if (isReportDispatch) {
       const { globalDataStore } = await import('@/lib/store/dataStore');
       const { compileFinancialReportEmail } = await import('@/lib/email/reportEmailGenerator');
 
-      const storeState = globalDataStore.getState();
+      const storeState = body.storeState || globalDataStore.getState();
+      const reportType = body.reportType || 'ProfitLoss';
+      const reportName = body.reportName || 'Profit & Loss Statement';
+
       const compiled = compileFinancialReportEmail({
-        reportType: body.reportType,
-        reportName: body.reportName || 'Financial Performance & Operations Report',
+        reportType,
+        reportName,
         frequency: body.frequency || 'Daily',
         recipientEmail: Array.isArray(body.to) ? body.to[0] : body.to,
         storeState,
@@ -43,8 +47,8 @@ export async function POST(request: Request) {
       const payload = {
         to: body.to || 'accounts@zawrindustries.com',
         subject: body.subject || compiled.subject,
-        htmlContent: body.htmlContent || compiled.htmlContent,
-        textContent: body.textContent || compiled.textContent,
+        htmlContent: compiled.htmlContent,
+        textContent: compiled.textContent,
         attachments: [
           compiled.attachment,
           ...(body.attachments || []),
@@ -57,7 +61,7 @@ export async function POST(request: Request) {
       return NextResponse.json({
         ...result,
         attachmentName: compiled.attachment.filename,
-        reportType: body.reportType,
+        reportType,
       });
     }
 

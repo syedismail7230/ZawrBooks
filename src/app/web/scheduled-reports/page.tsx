@@ -48,9 +48,10 @@ export default function ScheduledReportsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           to: schedule.recipientEmails,
-          reportType: schedule.reportType,
-          reportName: schedule.reportName,
-          frequency: schedule.frequency,
+          reportType: schedule.reportType || 'ProfitLoss',
+          reportName: schedule.reportName || 'Profit & Loss Statement',
+          frequency: schedule.frequency || 'Daily',
+          storeState: globalDataStore.getState(),
         }),
       });
 
@@ -108,6 +109,7 @@ export default function ScheduledReportsPage() {
           reportType: testReportType,
           reportName: chosenName,
           frequency: 'Daily',
+          storeState: globalDataStore.getState(),
         }),
       });
 

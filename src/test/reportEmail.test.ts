@@ -35,10 +35,12 @@ describe('Zawr Industries Executive Email & Excel Report Generator', () => {
       expect(html).toContain('EXECUTIVE FINANCIAL REPORT');
       expect(html).toContain('Dear <strong>Finance, Accounts & Executive Leadership Team</strong>');
       expect(html).toContain('1. ');
-      expect(html).toContain('2. Outbound Communications Log');
-      expect(html).toContain('4. Action Items & Follow-up Tasks');
-      expect(html).toContain('5. System Telemetry & Perimeter Defense');
-      expect(html).toContain('Perimeter Defense Normal');
+      expect(html).toContain('2. Financial Performance & Visual Trajectory');
+      expect(html).toContain('MAX. ACHIEVED ↑');
+      expect(html).toContain('3. Working Capital & Liquid Cash Reserves');
+      expect(html).toContain('4. Material Invoices & Trade Counterparties');
+      expect(html).toContain('5. Statutory Tax & Accounting Invariant Assurance');
+      expect(html).toContain('Double-Entry Equilibrium Invariant');
       expect(html).toContain('zawrindustries.com');
       expect(html).toContain('accounts@zawrindustries.com');
     });

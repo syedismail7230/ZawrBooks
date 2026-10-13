@@ -681,6 +681,23 @@ class DataStore {
     return newSched;
   }
 
+  // Delete Report Schedule
+  public deleteReportSchedule(scheduleId: string): { success: boolean } {
+    const sched = this.state.reportSchedules.find((s) => s.id === scheduleId);
+    this.state.reportSchedules = this.state.reportSchedules.filter((s) => s.id !== scheduleId);
+    if (sched) {
+      this.recordAuditEvent(
+        'DELETE_REPORT_SCHEDULE',
+        'ReportSchedule',
+        scheduleId,
+        { reportName: sched.reportName },
+        null
+      );
+    }
+    this.persist();
+    return { success: true };
+  }
+
   // Add Vendor Bill
   public addVendorBill(
     billData: Omit<VendorBill, 'id' | 'organizationId' | 'status' | 'amountPaidPaise' | 'createdAt'>

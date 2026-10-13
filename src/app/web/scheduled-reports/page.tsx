@@ -9,7 +9,7 @@ import { Modal } from '@/components/common/Modal';
 import { globalDataStore } from '@/lib/store/dataStore';
 import { ReportSchedule, ReportType } from '@/types';
 import { formatDateTime } from '@/lib/utils';
-import { CalendarClock, Play, Plus, Mail, CheckCircle2, AlertCircle } from 'lucide-react';
+import { CalendarClock, Play, Plus, Mail, CheckCircle2, AlertCircle, Trash2 } from 'lucide-react';
 
 export default function ScheduledReportsPage() {
   const [storeState, setStoreState] = useState(globalDataStore.getState());
@@ -170,6 +170,17 @@ export default function ScheduledReportsPage() {
     setTriggerAlert(`Report schedule "${newSched.reportName}" created successfully.`);
   };
 
+  const handleDeleteSchedule = (id: string, name: string) => {
+    if (
+      typeof window !== 'undefined' &&
+      !window.confirm(`Are you sure you want to delete the scheduled report "${name}"? This action cannot be undone.`)
+    ) {
+      return;
+    }
+    globalDataStore.deleteReportSchedule(id);
+    setTriggerAlert(`Scheduled report "${name}" was successfully deleted.`);
+  };
+
   return (
     <WebLayout>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#E5E5E5] pb-4">
@@ -257,7 +268,18 @@ export default function ScheduledReportsPage() {
                           Type: {sched.reportType} • Format: {sched.outputFormat}
                         </span>
                       </div>
-                      <Badge status={sched.isActive ? 'Active' : 'Paused'} />
+                      <div className="flex items-center gap-2">
+                        <Badge status={sched.isActive ? 'Active' : 'Paused'} />
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteSchedule(sched.id, sched.reportName)}
+                          className="text-[#999999] hover:text-[#C5221F] p-1 transition-colors"
+                          title={`Delete schedule ${sched.reportName}`}
+                          aria-label={`Delete schedule ${sched.reportName}`}
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
                     </div>
 
                     <div className="mt-3 text-xs text-[#555555] space-y-1">
@@ -278,14 +300,25 @@ export default function ScheduledReportsPage() {
                     <span className="text-[10px] text-[#888888]">
                       Last Run: {sched.lastRunAt ? formatDateTime(sched.lastRunAt) : 'Never'}
                     </span>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleTriggerNow(sched)}
-                      isLoading={runningId === sched.id}
-                    >
-                      <Play size={11} /> Run Now (Test)
-                    </Button>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDeleteSchedule(sched.id, sched.reportName)}
+                        className="text-[#C5221F] hover:text-[#900000] hover:bg-[#FCE8E6] border-[#E5E5E5] hover:border-[#F5C2C7]"
+                        title={`Delete schedule ${sched.reportName}`}
+                      >
+                        <Trash2 size={11} /> Delete
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleTriggerNow(sched)}
+                        isLoading={runningId === sched.id}
+                      >
+                        <Play size={11} /> Run Now (Test)
+                      </Button>
+                    </div>
                   </div>
                 </div>
               </Card>

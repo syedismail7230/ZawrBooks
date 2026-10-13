@@ -86,4 +86,35 @@ describe('Zawr Industries Executive Email & Excel Report Generator', () => {
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     );
   });
+
+  it('allows adding and deleting report delivery schedules with audit logging', () => {
+    const testSched = {
+      id: `test-sched-${Date.now()}`,
+      organizationId: 'org-test',
+      reportName: 'Weekly Executive Cashflow',
+      reportType: 'CashFlow' as const,
+      frequency: 'Weekly' as const,
+      recipientEmails: ['cfo@zawrindustries.com'],
+      outputFormat: 'PDF' as const,
+      isActive: true,
+      nextRunAt: new Date().toISOString(),
+    };
+
+    globalDataStore.addReportSchedule(testSched);
+    const stateAfterAdd = globalDataStore.getState();
+    expect(stateAfterAdd.reportSchedules.some((s) => s.id === testSched.id)).toBe(true);
+
+    const deleteRes = globalDataStore.deleteReportSchedule(testSched.id);
+    expect(deleteRes.success).toBe(true);
+
+    const stateAfterDelete = globalDataStore.getState();
+    expect(stateAfterDelete.reportSchedules.some((s) => s.id === testSched.id)).toBe(false);
+
+    // Verify audit event was logged
+    expect(
+      stateAfterDelete.auditEvents.some(
+        (a) => a.action === 'DELETE_REPORT_SCHEDULE' && a.entityId === testSched.id
+      )
+    ).toBe(true);
+  });
 });

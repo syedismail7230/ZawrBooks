@@ -11,15 +11,11 @@ import { CurrencyDisplay } from '@/components/common/CurrencyDisplay';
 import { globalDataStore } from '@/lib/store/dataStore';
 import { calculateProfitAndLoss, calculateBalanceSheet } from '@/lib/accounting/engine';
 import { formatDate } from '@/lib/utils';
-import { BalancedJournalModal } from '@/components/finance/BalancedJournalModal';
-import { ReceiptScannerModal } from '@/components/scanner/ReceiptScannerModal';
-import { Filter, Plus, Scan, ArrowUpRight, Building2, CheckCircle2 } from 'lucide-react';
+import { Filter, Plus, ArrowUpRight, Building2, CheckCircle2 } from 'lucide-react';
 import Link from 'next/link';
 
 export default function OverviewPage() {
   const [storeState, setStoreState] = useState(globalDataStore.getState());
-  const [isJournalOpen, setIsJournalOpen] = useState(false);
-  const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [selectedFY, setSelectedFY] = useState('2026-27');
 
   // Org Setup Form State
@@ -226,14 +222,6 @@ export default function OverviewPage() {
               <option value="2025-26">FY 2025-26</option>
             </select>
           </div>
-
-          <Button variant="outline" size="sm" onClick={() => setIsScannerOpen(true)}>
-            <Scan size={13} /> Scan Receipt
-          </Button>
-
-          <Button variant="primary" size="sm" onClick={() => setIsJournalOpen(true)}>
-            <Plus size={13} /> Post Journal
-          </Button>
         </div>
       </div>
 
@@ -408,14 +396,6 @@ export default function OverviewPage() {
         </div>
       </div>
 
-      <BalancedJournalModal
-        isOpen={isJournalOpen}
-        onClose={() => setIsJournalOpen(false)}
-      />
-      <ReceiptScannerModal
-        isOpen={isScannerOpen}
-        onClose={() => setIsScannerOpen(false)}
-      />
     </WebLayout>
   );
 }

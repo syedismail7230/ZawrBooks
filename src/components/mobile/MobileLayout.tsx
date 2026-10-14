@@ -164,29 +164,7 @@ export const MobileLayout: React.FC<{ children: React.ReactNode }> = ({ children
       <div className="min-h-screen bg-[#F4F3EF] flex flex-col font-sans select-none sm:select-text">
         <TopBar />
 
-        {/* Real-time Status Banner */}
-        <div className="w-full bg-[#EBF3EB] border-b border-[#C8E6C9] py-1.5 px-4 select-none sticky top-12 sm:top-14 z-30">
-          <div className="max-w-md mx-auto flex items-center justify-between text-[11px] text-[#1B5E20]">
-            <div className="flex items-center gap-2">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-600"></span>
-              </span>
-              <span className="font-semibold tracking-tight">Live Realtime Sync</span>
-              <span className="text-[10px] text-[#2E7D32] opacity-80 font-mono">• {syncLabel}</span>
-            </div>
 
-            <button
-              onClick={handleManualSync}
-              disabled={isSyncing}
-              className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-white/60 border border-[#C8E6C9] text-[10px] font-semibold text-[#1B5E20] hover:bg-white hover:text-black transition-all active:scale-95"
-              title="Force sync latest records"
-            >
-              <RefreshCw size={10} className={isSyncing ? 'animate-spin' : ''} />
-              <span>{isSyncing ? 'Syncing...' : 'Sync Now'}</span>
-            </button>
-          </div>
-        </div>
 
         {/* Real-time Alert Toast */}
         {realtimeToast && (

@@ -36,6 +36,8 @@ Write-Host ">>> [2/7] Linking Resources & Manifest..."
 & "$BuildTools\aapt2.exe" link -o "$WorkDir\unaligned.apk" `
     -I "$AndroidJar" `
     --manifest "$Manifest" `
+    --min-sdk-version 24 `
+    --target-sdk-version 34 `
     --java "$WorkDir\gen" `
     --auto-add-overlay `
     "$WorkDir\compiled_res.zip"
@@ -56,14 +58,14 @@ $FinalUnaligned = "$WorkDir\unaligned.apk"
 $FinalAligned = "$WorkDir\aligned.apk"
 & "$BuildTools\zipalign.exe" -f -p 4 "$FinalUnaligned" "$FinalAligned"
 
-Write-Host ">>> [7/7] Signing APK with apksigner..."
+Write-Host ">>> [7/7] Signing APK with apksigner (v1, v2, v3)..."
 $KeystorePath = "$WorkDir\zawr_release.keystore"
 & "$JdkBin\keytool.exe" -genkeypair -v -keystore "$KeystorePath" -storepass zawrbooks2026 -keypass zawrbooks2026 -alias zawrbooks -dname "CN=Zawr Books, OU=Technology, O=Zawr Industries LLP, L=Bangalore, ST=Karnataka, C=IN" -validity 10000 -keyalg RSA -keysize 2048
 
 $FinalApk = "$OutDir\ZawrBooks.apk"
 if (Test-Path $FinalApk) { Remove-Item -Force $FinalApk }
 
-& "$BuildTools\apksigner.bat" sign --ks "$KeystorePath" --ks-pass "pass:zawrbooks2026" --key-pass "pass:zawrbooks2026" --out "$FinalApk" "$FinalAligned"
+& "$BuildTools\apksigner.bat" sign --ks "$KeystorePath" --ks-pass "pass:zawrbooks2026" --key-pass "pass:zawrbooks2026" --v1-signing-enabled true --v2-signing-enabled true --v3-signing-enabled true --out "$FinalApk" "$FinalAligned"
 
 Write-Host ">>> Verification:"
 & "$BuildTools\apksigner.bat" verify "$FinalApk"

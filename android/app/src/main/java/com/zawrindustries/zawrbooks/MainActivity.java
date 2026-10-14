@@ -21,8 +21,8 @@ public class MainActivity extends Activity {
     private ValueCallback<Uri[]> mFilePathCallback;
     private static final int FILE_CHOOSER_RESULT_CODE = 1001;
 
-    // Default target: Zawr Books Mobile endpoint
-    private static final String TARGET_URL = "http://10.0.2.2:3000/mobile";
+    // Default target: Zawr Books Mobile production endpoint
+    private static final String TARGET_URL = "https://zawr-books.vercel.app/mobile";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -64,6 +64,17 @@ public class MainActivity extends Activity {
         public boolean shouldOverrideUrlLoading(WebView view, String url) {
             view.loadUrl(url);
             return true;
+        }
+
+        @Override
+        public void onReceivedError(WebView view, int errorCode, String description, String failingUrl) {
+            String errorHtml = "<html><body style='font-family:sans-serif;text-align:center;padding:50px 20px;background:#F4F3EF;color:#111;'>"
+                    + "<h2 style='font-size:18px;margin-bottom:10px;'>Connection Notice</h2>"
+                    + "<p style='font-size:13px;color:#666;line-height:1.5;'>Unable to reach Zawr Books Mobile server. Please ensure you are connected to the Internet.</p>"
+                    + "<p style='font-size:11px;color:#999;font-family:monospace;margin:15px 0;'>" + description + "</p>"
+                    + "<button onclick='location.reload()' style='background:#111;color:#fff;border:none;padding:10px 24px;font-size:13px;font-weight:bold;cursor:pointer;margin-top:10px;'>Retry</button>"
+                    + "</body></html>";
+            view.loadDataWithBaseURL(null, errorHtml, "text/html", "utf-8", null);
         }
     }
 

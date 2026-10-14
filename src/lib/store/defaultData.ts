@@ -2,10 +2,10 @@ import { Account, Organization } from '@/types';
 
 export const defaultOrganization: Organization = {
   id: 'org-zawr-main',
-  name: 'Zawr Industries',
-  legalName: 'Zawr Industries Private Limited',
-  gstin: '29AABCZ1234F1Z5',
-  pan: 'AABCZ1234F',
+  name: 'ZAWR INDUSTRIES LLP',
+  legalName: 'ZAWR INDUSTRIES LLP',
+  gstin: '29AADFZ6214A1ZC',
+  pan: 'AADFZ6214A',
   currency: 'INR',
   fyStartMonth: 4,
   timezone: 'Asia/Kolkata',

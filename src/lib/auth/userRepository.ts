@@ -59,13 +59,15 @@ class UserRepository {
 
       if (fs.existsSync(this.storageFile)) {
         const raw = fs.readFileSync(this.storageFile, 'utf-8');
-        const list: UserRecord[] = JSON.parse(raw);
-        for (const u of list) {
-          if (u.passwordHash || u.lastLoginAt) {
-            savedHashes.set(u.email.toLowerCase(), {
-              passwordHash: u.passwordHash,
-              lastLoginAt: u.lastLoginAt,
-            });
+        if (raw && raw.trim().length > 0) {
+          const list: UserRecord[] = JSON.parse(raw);
+          for (const u of list) {
+            if (u.passwordHash || u.lastLoginAt) {
+              savedHashes.set(u.email.toLowerCase(), {
+                passwordHash: u.passwordHash,
+                lastLoginAt: u.lastLoginAt,
+              });
+            }
           }
         }
       }

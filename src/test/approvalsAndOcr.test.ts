@@ -125,10 +125,10 @@ describe('ZawrBooks Comprehensive UT QA - OCR, Approvals & Organization Persiste
       const state = globalDataStore.getState();
 
       expect(state.organization).not.toBeNull();
-      expect(state.organization?.name).toBe('Zawr Industries');
-      expect(state.organization?.legalName).toBe('Zawr Industries Private Limited');
-      expect(state.organization?.gstin).toBe('29AABCZ1234F1Z5');
-      expect(state.organization?.pan).toBe('AABCZ1234F');
+      expect(state.organization?.name).toBe('ZAWR INDUSTRIES LLP');
+      expect(state.organization?.legalName).toBe('ZAWR INDUSTRIES LLP');
+      expect(state.organization?.gstin).toBe('29AADFZ6214A1ZC');
+      expect(state.organization?.pan).toBe('AADFZ6214A');
       expect(state.organization?.currency).toBe('INR');
       expect(state.organization?.timezone).toBe('Asia/Kolkata');
     });
@@ -280,14 +280,70 @@ describe('ZawrBooks Comprehensive UT QA - OCR, Approvals & Organization Persiste
       });
 
       expect(bill.id).toBeDefined();
+      expect(bill.status).toBe('Submitted');
+
+      // Verify it appears in pending bills
+      const stateBefore = globalDataStore.getState();
+      const pendingBefore = stateBefore.vendorBills.filter((b) => b.status === 'Submitted');
+      expect(pendingBefore.some((b) => b.id === bill.id)).toBe(true);
 
       // Review and authorize bill
       const result = globalDataStore.reviewVendorBill(bill.id, 'Approved', 'Authorized for payment remittance');
       expect(result.success).toBe(true);
 
-      const state = globalDataStore.getState();
-      const updated = state.vendorBills.find((b) => b.id === bill.id);
+      const stateAfter = globalDataStore.getState();
+      const updated = stateAfter.vendorBills.find((b) => b.id === bill.id);
       expect(updated?.status).toBe('Approved');
+    });
+
+    it('QA-13: Accurately parses user test Tax Invoice (ZAWR INDUSTRIES LLP, ZI/25-26/0421, ₹17,700.00)', () => {
+      const userBillText = `
+ZAWR INDUSTRIES LLP
+No. 12, 3rd Floor, MG Road
+Bengaluru - 560001, Karnataka
+GSTIN: 29AABFZ1234C1Z5
+
+TAX INVOICE
+Invoice No. : ZI/25-26/0421
+Invoice Date : 14-10-2026
+Place of Supply : Karnataka (29)
+Bill To : ABC Private Limited
+ Bengaluru - 560001
+ GSTIN: 29AAHCA1234D1Z6
+
+Sr. Description SAC Qty Rate Amount
+1 Web Development Services 998314 1 10,000.00 10,000.00
+2 Digital Marketing Services 998326 1 5,000.00 5,000.00
+
+Subtotal 15,000.00
+CGST @ 9% 1,350.00
+SGST @ 9% 1,350.00
+Total ₹ 17,700.00
+Amount in Words: Rupees Seventeen Thousand Seven Hundred Only
+      `;
+
+      const result = parseReceiptText(userBillText, 'camera-scan-2026-10-14.jpg');
+
+      expect(result.merchantName?.value).toBe('ZAWR INDUSTRIES LLP');
+      expect(result.vendorGstin?.value).toBe('29AABFZ1234C1Z5');
+      expect(result.invoiceNumber?.value).toBe('ZI/25-26/0421');
+      expect(result.invoiceDate?.value).toBe('2026-10-14');
+      expect(result.subtotalPaise?.value).toBe(1500000);
+      expect(result.cgstPaise?.value).toBe(135000);
+      expect(result.sgstPaise?.value).toBe(135000);
+      expect(result.grandTotalPaise?.value).toBe(1770000);
+    });
+
+    it('QA-14: Empty OCR text from camera scan never produces bogus "Camera" or "2026.00" values', () => {
+      const result = parseReceiptText('', 'camera-scan-2026-10-14-19-48-19.jpg');
+
+      // Merchant must not be set to "Camera"
+      expect(result.merchantName?.value).not.toBe('Camera');
+      expect(result.merchantName?.value).not.toBe('Camera Scan');
+
+      // Grand total must not match the year 2026 from the filename timestamp
+      expect(result.grandTotalPaise?.value).not.toBe(202600);
+      expect(result.grandTotalPaise?.value).toBe(0);
     });
   });
 });

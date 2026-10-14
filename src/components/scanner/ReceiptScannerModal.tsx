@@ -33,6 +33,8 @@ import {
   Home,
   Scan,
   ArrowRight,
+  Focus,
+  Crosshair,
 } from 'lucide-react';
 import Tesseract from 'tesseract.js';
 
@@ -68,6 +70,9 @@ export const ReceiptScannerModal: React.FC<ReceiptScannerModalProps> = ({
   const [facingMode, setFacingMode] = useState<'environment' | 'user'>('environment');
   const [hasTorch, setHasTorch] = useState<boolean>(false);
   const [isTorchOn, setIsTorchOn] = useState<boolean>(false);
+  const [focusPoint, setFocusPoint] = useState<{ x: number; y: number } | null>(null);
+  const [isFocusing, setIsFocusing] = useState<boolean>(false);
+  const [hasAutoFocus, setHasAutoFocus] = useState<boolean>(false);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -110,6 +115,7 @@ export const ReceiptScannerModal: React.FC<ReceiptScannerModalProps> = ({
     }
     setIsCameraActive(false);
     setIsTorchOn(false);
+    setFocusPoint(null);
   }, []);
 
   const startCamera = useCallback(async (mode: 'environment' | 'user' = facingMode) => {
@@ -127,17 +133,21 @@ export const ReceiptScannerModal: React.FC<ReceiptScannerModalProps> = ({
       let stream: MediaStream | null = null;
       const targetFacing = mode === 'user' ? 'user' : 'environment';
 
-      // Tier 1: Ideal facingMode without hardcoded width/height (avoids Android portrait OverconstrainedError)
+      // Tier 1: High resolution with continuous autofocus
       try {
         stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: { ideal: targetFacing } },
+          video: {
+            facingMode: { ideal: targetFacing },
+            width: { ideal: 1920 },
+            height: { ideal: 1080 },
+          },
           audio: false,
         });
       } catch (err1) {
-        console.warn('Tier 1 camera init failed, trying direct facingMode:', err1);
+        console.warn('Tier 1 camera init failed, trying ideal facingMode:', err1);
         try {
           stream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: targetFacing },
+            video: { facingMode: { ideal: targetFacing } },
             audio: false,
           });
         } catch (err2) {
@@ -167,11 +177,26 @@ export const ReceiptScannerModal: React.FC<ReceiptScannerModalProps> = ({
         }
       }
 
-      // Check if torch is supported
+      // Check capabilities for torch and continuous focus
       const track = stream.getVideoTracks()[0];
       if (track) {
         const caps = (track.getCapabilities ? track.getCapabilities() : {}) as any;
         setHasTorch(Boolean(caps && 'torch' in caps));
+
+        const focusSupported = Boolean(
+          caps && caps.focusMode && Array.isArray(caps.focusMode) && caps.focusMode.includes('continuous')
+        );
+        setHasAutoFocus(focusSupported);
+
+        if (focusSupported) {
+          try {
+            await (track as any).applyConstraints({
+              advanced: [{ focusMode: 'continuous' }],
+            });
+          } catch (fErr) {
+            console.warn('Continuous autofocus application notice:', fErr);
+          }
+        }
       }
 
       setIsCameraActive(true);
@@ -188,6 +213,40 @@ export const ReceiptScannerModal: React.FC<ReceiptScannerModalProps> = ({
       setIsCameraStarting(false);
     }
   }, [facingMode, stopCamera]);
+
+  const triggerFocus = async (clientX?: number, clientY?: number, rect?: DOMRect) => {
+    const track = streamRef.current?.getVideoTracks()[0];
+    if (!track) return;
+    setIsFocusing(true);
+
+    if (clientX !== undefined && clientY !== undefined && rect) {
+      setFocusPoint({ x: clientX - rect.left, y: clientY - rect.top });
+    }
+
+    try {
+      const caps = (track.getCapabilities ? track.getCapabilities() : {}) as any;
+      const adv: any = {};
+      if (caps && caps.focusMode) {
+        adv.focusMode = 'continuous';
+      }
+      if (clientX !== undefined && clientY !== undefined && rect && caps && caps.pointsOfInterest) {
+        adv.pointsOfInterest = [{
+          x: Math.max(0, Math.min(1, (clientX - rect.left) / rect.width)),
+          y: Math.max(0, Math.min(1, (clientY - rect.top) / rect.height)),
+        }];
+      }
+      if (Object.keys(adv).length > 0) {
+        await (track as any).applyConstraints({ advanced: [adv] });
+      }
+    } catch (err) {
+      console.warn('Autofocus trigger notice:', err);
+    } finally {
+      setTimeout(() => {
+        setIsFocusing(false);
+        setFocusPoint(null);
+      }, 1000);
+    }
+  };
 
   const toggleTorch = async () => {
     const track = streamRef.current?.getVideoTracks()[0];
@@ -360,7 +419,7 @@ export const ReceiptScannerModal: React.FC<ReceiptScannerModalProps> = ({
         const cvResult = await preprocessReceiptImage(fileDataUrl, {
           maxDimension: 1400,
           applyContrastStretch: true,
-          applyBinarization: true,
+          applyBinarization: false, // Keep false so font anti-aliasing is preserved for OCR
         });
         processedDataUrl = cvResult.processedDataUrl;
       } catch (cvErr) {
@@ -375,12 +434,12 @@ export const ReceiptScannerModal: React.FC<ReceiptScannerModalProps> = ({
       let extracted: ExtractedReceiptData | null = null;
       let rawText = '';
 
-      // 2. High-Accuracy Server OCR Endpoint (Google Gemini 1.5 Flash Vision or Node.js Tesseract)
+      // 2. High-Accuracy Server OCR Endpoint (send downscaled <300KB processedDataUrl)
       try {
         const apiRes = await fetch('/api/ocr/extract', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ fileData: fileDataUrl, fileName: name }),
+          body: JSON.stringify({ fileData: processedDataUrl, fileName: name }),
         });
 
         if (apiRes.ok) {
@@ -404,7 +463,7 @@ export const ReceiptScannerModal: React.FC<ReceiptScannerModalProps> = ({
           })();
 
           const timeoutTask = new Promise<string>((resolve) =>
-            setTimeout(() => resolve(''), 10000)
+            setTimeout(() => resolve(''), 12000)
           );
 
           const clientRaw = await Promise.race([ocrTask, timeoutTask]);
@@ -441,7 +500,8 @@ export const ReceiptScannerModal: React.FC<ReceiptScannerModalProps> = ({
 
     if (submissionType === 'vendor_bill') {
       // Ensure vendor exists in system
-      let vend = store.vendors.find((v) => v.name.toLowerCase() === (merchantName || 'Direct Vendor').toLowerCase());
+      const currentVendors = globalDataStore.getState().vendors;
+      let vend = currentVendors.find((v) => v.name.toLowerCase() === (merchantName || 'Direct Vendor').toLowerCase());
       if (!vend) {
         vend = globalDataStore.addVendor({
           name: merchantName || 'Direct Vendor',
@@ -463,33 +523,34 @@ export const ReceiptScannerModal: React.FC<ReceiptScannerModalProps> = ({
         subtotalPaise: subtotalPaise || grandTotalPaise,
         taxPaise: totalTaxPaise,
         totalPaise: grandTotalPaise,
+        status: 'Submitted',
+      });
+    } else {
+      globalDataStore.submitExpense({
+        employeeId: globalDataStore.getState().currentUser?.id || 'usr-active',
+        employeeName: globalDataStore.getState().currentUser?.fullName || 'Current User',
+        title: `${category}: ${merchantName || 'Business Expense'}`,
+        vendorName: merchantName || 'Direct Vendor',
+        vendorGstin: vendorGstin || undefined,
+        invoiceNumber: invoiceNumber || `INV-${Date.now().toString().slice(-6)}`,
+        invoiceDate: invoiceDate || new Date().toISOString().split('T')[0],
+        category,
+        department,
+        subtotalPaise: subtotalPaise || grandTotalPaise,
+        cgstPaise: Math.round(totalTaxPaise / 2),
+        sgstPaise: Math.round(totalTaxPaise / 2),
+        igstPaise: 0,
+        cessPaise: 0,
+        totalTaxPaise,
+        grandTotalPaise,
+        isTaxIncluded: true,
+        businessPurpose: businessPurpose || 'Business necessity',
+        paymentMethod,
+        isReimbursable,
+        reimbursementStatus: isReimbursable ? 'Pending' : 'Not Applicable',
+        extractedData: extractedData || undefined,
       });
     }
-
-    globalDataStore.submitExpense({
-      employeeId: store.currentUser?.id || 'usr-active',
-      employeeName: store.currentUser?.fullName || 'Current User',
-      title: `${category}: ${merchantName || 'Business Expense'}`,
-      vendorName: merchantName || 'Direct Vendor',
-      vendorGstin: vendorGstin || undefined,
-      invoiceNumber: invoiceNumber || `INV-${Date.now().toString().slice(-6)}`,
-      invoiceDate: invoiceDate || new Date().toISOString().split('T')[0],
-      category,
-      department,
-      subtotalPaise: subtotalPaise || grandTotalPaise,
-      cgstPaise: Math.round(totalTaxPaise / 2),
-      sgstPaise: Math.round(totalTaxPaise / 2),
-      igstPaise: 0,
-      cessPaise: 0,
-      totalTaxPaise,
-      grandTotalPaise,
-      isTaxIncluded: true,
-      businessPurpose: businessPurpose || 'Business necessity',
-      paymentMethod,
-      isReimbursable: submissionType === 'expense' ? isReimbursable : false,
-      reimbursementStatus: submissionType === 'expense' && isReimbursable ? 'Pending' : 'Not Applicable',
-      extractedData: extractedData || undefined,
-    });
 
     onSuccess?.();
     resetState();
@@ -551,8 +612,18 @@ export const ReceiptScannerModal: React.FC<ReceiptScannerModalProps> = ({
               <X size={20} />
             </button>
 
-            {/* Right Tools (Torch & Camera Switch) */}
+            {/* Right Tools (Autofocus, Torch & Camera Switch) */}
             <div className="flex items-center gap-2.5">
+              <button
+                type="button"
+                onClick={() => triggerFocus()}
+                className={`w-11 h-11 rounded-full backdrop-blur-md border border-white/20 flex items-center justify-center active:scale-95 transition-all shadow-lg cursor-pointer ${
+                  isFocusing ? 'bg-emerald-500 text-black animate-pulse' : 'bg-black/60 text-white hover:bg-black/80'
+                }`}
+                title="Tap to Autofocus"
+              >
+                <Focus size={18} />
+              </button>
               {hasTorch && (
                 <button
                   type="button"
@@ -578,8 +649,23 @@ export const ReceiptScannerModal: React.FC<ReceiptScannerModalProps> = ({
 
           {/* Center Viewfinder Framing (Matches Image 2!) */}
           <div className="relative z-10 flex flex-col items-center justify-center px-6 my-auto">
-            {/* Rounded Rectangle Viewfinder Frame */}
-            <div className="w-[82vw] max-w-[340px] aspect-[3/4] border-2 border-white/90 rounded-3xl relative overflow-hidden shadow-2xl backdrop-contrast-105">
+            {/* Rounded Rectangle Viewfinder Frame with Tap to Focus */}
+            <div
+              onClick={(e) => {
+                const rect = e.currentTarget.getBoundingClientRect();
+                triggerFocus(e.clientX, e.clientY, rect);
+              }}
+              className="w-[82vw] max-w-[340px] aspect-[3/4] border-2 border-white/90 rounded-3xl relative overflow-hidden shadow-2xl backdrop-contrast-105 cursor-crosshair"
+              title="Tap anywhere to Focus"
+            >
+              {/* Tap to Focus Reticle */}
+              {focusPoint && (
+                <div
+                  style={{ left: focusPoint.x - 24, top: focusPoint.y - 24 }}
+                  className="absolute w-12 h-12 border-2 border-emerald-400 rounded-lg pointer-events-none z-30 animate-ping opacity-90 shadow-[0_0_12px_#10B981]"
+                />
+              )}
+
               {/* Animated Glowing Laser Scanning Beam - Platform Emerald Theme */}
               <div className="absolute inset-x-0 h-1 bg-gradient-to-r from-transparent via-emerald-400 to-transparent shadow-[0_0_18px_rgba(16,185,129,0.95)] animate-scan-beam" />
               <div className="absolute inset-x-0 h-20 bg-gradient-to-b from-emerald-500/20 to-transparent pointer-events-none animate-scan-aura" />
@@ -625,19 +711,24 @@ export const ReceiptScannerModal: React.FC<ReceiptScannerModalProps> = ({
               )}
             </div>
 
-            {/* Status Pill below Frame - Platform Live Status Indicator */}
-            <div className="mt-4 px-4 py-1.5 rounded-full bg-black/70 backdrop-blur-md border border-white/20 text-white text-[11px] font-medium flex items-center gap-2 shadow-lg">
+            {/* Status Pill below Frame - Platform Live Status Indicator with Tap-to-Focus cue */}
+            <div
+              onClick={() => triggerFocus()}
+              className="mt-4 px-4 py-1.5 rounded-full bg-black/70 backdrop-blur-md border border-white/20 text-white text-[11px] font-medium flex items-center gap-2 shadow-lg cursor-pointer hover:bg-black/85 transition-colors"
+            >
               <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                <span className={`animate-ping absolute inline-flex h-full w-full rounded-full ${isFocusing ? 'bg-amber-400' : 'bg-emerald-400'} opacity-75`}></span>
+                <span className={`relative inline-flex rounded-full h-2 w-2 ${isFocusing ? 'bg-amber-500' : 'bg-emerald-500'}`}></span>
               </span>
-              <span className="tracking-wide">Align receipt inside frame</span>
+              <span className="tracking-wide">
+                {isFocusing ? 'Adjusting Focus...' : 'Tap anywhere to focus • Align bill inside frame'}
+              </span>
             </div>
           </div>
 
           {/* Bottom Floating Pill Dock - Platform Brand Theme */}
           <div className="relative z-20 px-6 pb-[max(1.8rem,env(safe-area-inset-bottom))] flex items-center justify-center">
-            <div className="bg-[#111111]/95 backdrop-blur-2xl border border-white/20 rounded-full px-8 py-3.5 flex items-center gap-9 shadow-2xl">
+            <div className="bg-[#111111]/95 backdrop-blur-2xl border border-white/20 rounded-full px-7 py-3.5 flex items-center gap-7 shadow-2xl">
               {/* Left: Home / Close */}
               <button
                 type="button"
@@ -651,7 +742,17 @@ export const ReceiptScannerModal: React.FC<ReceiptScannerModalProps> = ({
                 <Home size={22} />
               </button>
 
-              {/* Center: Signature Platform Shutter Button (Jet Black, Stark White Border, Emerald Target Dot) */}
+              {/* Native HD Camera with Laser Autofocus */}
+              <button
+                type="button"
+                onClick={() => cameraInputRef.current?.click()}
+                className="p-2 text-gray-400 hover:text-emerald-400 active:scale-90 transition-transform cursor-pointer flex flex-col items-center"
+                title="Capture with Native Phone Camera (Hardware Autofocus)"
+              >
+                <Camera size={22} />
+              </button>
+
+              {/* Center: Signature Platform Shutter Button */}
               <button
                 type="button"
                 onClick={handleShutterClick}

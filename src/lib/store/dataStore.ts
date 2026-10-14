@@ -1059,29 +1059,9 @@ class DataStore {
     return { success: true };
   }
 
-  // Add Vendor Bill
-  public addVendorBill(
-    billData: Omit<VendorBill, 'id' | 'organizationId' | 'status' | 'amountPaidPaise' | 'createdAt'>
-  ): VendorBill {
-    const id = `bill-${Date.now()}`;
+  // Helper to post vendor bill double-entry journal
+  private postVendorBillJournalEntry(bill: VendorBill) {
     const orgId = this.state.organization?.id || 'org-default';
-    const newBill: VendorBill = {
-      ...billData,
-      id,
-      organizationId: orgId,
-      status: 'Approved',
-      amountPaidPaise: 0,
-      createdAt: new Date().toISOString(),
-    };
-
-    this.state.vendorBills.unshift(newBill);
-
-    const vend = this.state.vendors.find((v) => v.id === newBill.vendorId);
-    if (vend) {
-      vend.outstandingBalancePaise += newBill.totalPaise;
-    }
-
-    // Auto-create balanced journal entry
     const payableAcc = this.state.accounts.find((a) => a.code === '2010');
     const expenseAcc = this.state.accounts.find((a) => a.type === 'Expense');
 
@@ -1090,27 +1070,27 @@ class DataStore {
       const journal: JournalEntry = {
         id: jeId,
         organizationId: orgId,
-        entryNumber: `JE-BILL-${newBill.billNumber}`,
-        entryDate: newBill.billDate,
-        postingDate: newBill.billDate,
+        entryNumber: `JE-BILL-${bill.billNumber}`,
+        entryDate: bill.billDate,
+        postingDate: bill.billDate,
         status: 'Posted',
-        description: `Vendor Bill ${newBill.billNumber} from ${newBill.vendorName}`,
-        reference: newBill.billNumber,
+        description: `Vendor Bill ${bill.billNumber} from ${bill.vendorName}`,
+        reference: bill.billNumber,
         createdBy: this.state.currentUser.id,
         createdByName: this.state.currentUser.fullName,
         postedBy: this.state.currentUser.id,
         postedAt: new Date().toISOString(),
-        totalDebitPaise: newBill.totalPaise,
-        totalCreditPaise: newBill.totalPaise,
+        totalDebitPaise: bill.totalPaise,
+        totalCreditPaise: bill.totalPaise,
         lines: [
           {
             id: `line-${Date.now()}-1`,
             accountId: expenseAcc.id,
             accountName: expenseAcc.name,
             accountCode: expenseAcc.code,
-            debitPaise: newBill.subtotalPaise,
+            debitPaise: bill.subtotalPaise,
             creditPaise: 0,
-            description: `Expense: ${newBill.vendorName}`,
+            description: `Expense: ${bill.vendorName}`,
           },
           {
             id: `line-${Date.now()}-2`,
@@ -1118,8 +1098,8 @@ class DataStore {
             accountName: payableAcc.name,
             accountCode: payableAcc.code,
             debitPaise: 0,
-            creditPaise: newBill.totalPaise,
-            description: `Trade Creditors: ${newBill.vendorName}`,
+            creditPaise: bill.totalPaise,
+            description: `Trade Creditors: ${bill.vendorName}`,
           },
         ],
       };
@@ -1127,11 +1107,39 @@ class DataStore {
       this.state.journalEntries.push(journal);
       this.state.accounts = applyJournalToAccounts(journal, this.state.accounts);
     }
+  }
+
+  // Add Vendor Bill
+  public addVendorBill(
+    billData: Omit<VendorBill, 'id' | 'organizationId' | 'status' | 'amountPaidPaise' | 'createdAt'> & { status?: VendorBill['status'] }
+  ): VendorBill {
+    const id = `bill-${Date.now()}`;
+    const orgId = this.state.organization?.id || 'org-default';
+    const initialStatus = billData.status || 'Submitted';
+    const newBill: VendorBill = {
+      ...billData,
+      id,
+      organizationId: orgId,
+      status: initialStatus,
+      amountPaidPaise: 0,
+      createdAt: new Date().toISOString(),
+    };
+
+    this.state.vendorBills.unshift(newBill);
+
+    if (initialStatus === 'Approved') {
+      const vend = this.state.vendors.find((v) => v.id === newBill.vendorId);
+      if (vend) {
+        vend.outstandingBalancePaise += newBill.totalPaise;
+      }
+      this.postVendorBillJournalEntry(newBill);
+    }
 
     this.recordAuditEvent('CREATE_VENDOR_BILL', 'VendorBill', newBill.id, null, {
       billNumber: newBill.billNumber,
       vendorName: newBill.vendorName,
       totalPaise: newBill.totalPaise,
+      status: newBill.status,
     });
 
     this.persist();
@@ -1160,7 +1168,15 @@ class DataStore {
     if (!bill) return { success: false, error: 'Vendor bill not found' };
 
     const prevStatus = bill.status;
-    bill.status = decision === 'Approved' ? 'Approved' : decision === 'Rejected' ? 'Rejected' : 'Draft';
+    bill.status = decision === 'Approved' ? 'Approved' : decision === 'Rejected' ? 'Rejected' : 'Returned';
+
+    if (decision === 'Approved' && prevStatus !== 'Approved') {
+      const vend = this.state.vendors.find((v) => v.id === bill.vendorId);
+      if (vend) {
+        vend.outstandingBalancePaise += bill.totalPaise;
+      }
+      this.postVendorBillJournalEntry(bill);
+    }
 
     this.recordAuditEvent(
       `DECIDE_VENDOR_BILL_${decision.toUpperCase()}`,

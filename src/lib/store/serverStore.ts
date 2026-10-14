@@ -251,7 +251,7 @@ class ServerStore {
     const bill = state.vendorBills.find((b) => b.id === id);
     if (!bill) return { success: false, error: 'Vendor bill not found' };
 
-    bill.status = decision === 'Approved' ? 'Open' : decision === 'Rejected' ? 'Void' : 'Draft';
+    bill.status = decision === 'Approved' ? 'Approved' : decision === 'Rejected' ? 'Rejected' : 'Returned';
     // Add audit notation
     this.saveStoreState({ vendorBills: state.vendorBills });
     return { success: true, bill };

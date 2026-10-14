@@ -107,15 +107,18 @@ export function parseReceiptText(text: string, fileName: string = ''): Extracted
 
   // Fallback merchant name from first prominent non-number line or filename
   if (!merchantName && lines.length > 0) {
+    const ignoredWords = [
+      'invoice', 'receipt', 'bill', 'gstin', 'tax', 'original', 'duplicate', 'triplicate',
+      'camera', 'markup', 'comment', 'remove', 'erase', 'resize', 'scan', 'photo', 'screenshot',
+      'payment', 'details', 'thank', 'business', 'authorised', 'signatory', 'subtotal', 'total'
+    ];
     const candidate = lines.find(
       (l) =>
         l.length >= 3 &&
         l.length <= 45 &&
-        !l.toLowerCase().includes('invoice') &&
-        !l.toLowerCase().includes('receipt') &&
-        !l.toLowerCase().includes('bill') &&
-        !l.toLowerCase().includes('gstin') &&
-        !/^\d+$/.test(l)
+        !ignoredWords.some((w) => l.toLowerCase().includes(w)) &&
+        !/^\d+$/.test(l) &&
+        !/^[0-9\s:.,\-\/]+$/.test(l)
     );
     if (candidate) {
       merchantName = candidate.replace(/[^a-zA-Z0-9\s&.,'-]/g, '').trim();
@@ -129,17 +132,28 @@ export function parseReceiptText(text: string, fileName: string = ''): Extracted
       .replace(/\b(?:invoice|bill|receipt|scan|img|doc|screenshot|tax)\b/gi, '')
       .replace(/\d+/g, '')
       .trim();
-    if (cleanFileName.length >= 3) {
+    const genericNonVendors = new Set([
+      'camera', 'scan', 'scanner', 'photo', 'picture', 'image', 'doc', 'document',
+      'capture', 'screenshot', 'upload', 'file', 'mobile', 'download', 'temp', 'untitled'
+    ]);
+    if (cleanFileName.length >= 3 && !genericNonVendors.has(cleanFileName.toLowerCase())) {
       merchantName = cleanFileName.replace(/\b\w/g, (c) => c.toUpperCase());
     }
   }
 
   // 2. GSTIN Extraction (Indian 15-character GSTIN format)
   let vendorGstin = '';
-  const gstinRegex = /\b([0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1})\b/i;
-  const gstinMatch = cleanText.match(gstinRegex);
-  if (gstinMatch) {
-    vendorGstin = gstinMatch[1].toUpperCase();
+  const labeledGstinRegex = /(?:GSTIN|GST|GST\s*NO\.?|GST\s*IN)[\s:.\-]*([0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1})\b/i;
+  const generalGstinRegex = /\b([0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1})\b/i;
+  
+  const labeledMatch = cleanText.match(labeledGstinRegex);
+  if (labeledMatch && labeledMatch[1]) {
+    vendorGstin = labeledMatch[1].toUpperCase();
+  } else {
+    const generalMatch = cleanText.match(generalGstinRegex);
+    if (generalMatch && generalMatch[1]) {
+      vendorGstin = generalMatch[1].toUpperCase();
+    }
   }
 
   // 3. Invoice / Bill Number Extraction
@@ -290,17 +304,26 @@ export function parseReceiptText(text: string, fileName: string = ''): Extracted
     const symbolMatches = cleanText.matchAll(/(?:₹|Rs\.?|INR)\s*([0-9,]+(?:\.[0-9]{2})?)/gi);
     for (const m of symbolMatches) {
       const amt = parseNum(m[1]);
-      if (amt > grandTotalRupees && amt < 5000000) {
+      if (amt > grandTotalRupees && amt < 5000000 && (amt < 2024 || amt > 2030)) {
         grandTotalRupees = amt;
       }
     }
   }
 
-  // 4. Fallback: Check if filename contains amount (e.g. "Bill_2500.pdf" or "Invoice_980_AWS.jpg")
-  if (grandTotalRupees === 0 && fileName) {
-    const amtMatch = fileName.match(/[-_ ]([0-9]{2,7})(?:\.|\b)/);
+  // 4. Fallback: Check if filename explicitly contains amount (e.g. "Bill_3500.pdf" or "Invoice_980_AWS.jpg")
+  const isGeneratedScanName = /^(?:camera[-_]scan|scan|img|screenshot|photo|image|picture)[-_0-9]/i.test(fileName);
+  if (grandTotalRupees === 0 && fileName && !isGeneratedScanName) {
+    const withoutDates = fileName
+      .replace(/\b20\d{2}[-_]\d{1,2}[-_]\d{1,2}\b/g, '')
+      .replace(/\b\d{4}[-_]\d{2}[-_]\d{2}[-_]\d{2,6}\b/g, '');
+    const amtMatch =
+      withoutDates.match(/(?:amt|rs|inr|total|bill|invoice)[-_ ]*([0-9]{2,7}(?:\.[0-9]{2})?)/i) ||
+      withoutDates.match(/[-_ ]([0-9]{2,7})(?:\.|\b)/);
     if (amtMatch && amtMatch[1]) {
-      grandTotalRupees = parseNum(amtMatch[1]);
+      const val = parseNum(amtMatch[1]);
+      if (val < 2024 || val > 2030 || amtMatch[0].toLowerCase().includes('bill') || amtMatch[0].toLowerCase().includes('amt')) {
+        grandTotalRupees = val;
+      }
     }
   }
 

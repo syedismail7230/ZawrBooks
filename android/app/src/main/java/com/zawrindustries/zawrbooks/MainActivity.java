@@ -2,6 +2,7 @@ package com.zawrindustries.zawrbooks;
 
 import android.app.Activity;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.Bundle;
 import android.view.KeyEvent;
@@ -21,19 +22,29 @@ public class MainActivity extends Activity {
     private ValueCallback<Uri[]> mFilePathCallback;
     private static final int FILE_CHOOSER_RESULT_CODE = 1001;
 
-    // Default target: Zawr Books Mobile production endpoint
-    private static final String TARGET_URL = "https://zawr-books.vercel.app/mobile";
+    private static final String PREFS_NAME = "ZawrBooksConfig";
+    private static final String KEY_SERVER_URL = "server_url";
+    private static final String DEFAULT_URL = "https://zawr-books.vercel.app/mobile";
+
+    private SharedPreferences mPrefs;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        mPrefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
         mWebView = findViewById(R.id.webview);
         mProgressBar = findViewById(R.id.progressBar);
 
         configureWebView();
-        mWebView.loadUrl(TARGET_URL);
+
+        String configuredUrl = mPrefs.getString(KEY_SERVER_URL, "");
+        if (configuredUrl != null && !configuredUrl.trim().isEmpty()) {
+            mWebView.loadUrl(configuredUrl);
+        } else {
+            showSetupPage("");
+        }
     }
 
     private void configureWebView() {
@@ -55,11 +66,121 @@ public class MainActivity extends Activity {
         cookieManager.setAcceptCookie(true);
         cookieManager.setAcceptThirdPartyCookies(mWebView, true);
 
-        mWebView.setWebViewClient(new AppWebViewClient());
+        mWebView.addJavascriptInterface(new WebAppInterface(this), "ZawrApp");
+        mWebView.setWebViewClient(new AppWebViewClient(this));
         mWebView.setWebChromeClient(new AppWebChromeClient(this));
     }
 
+    public void showSetupPage(String currentUrl) {
+        String cleanCurrent = currentUrl == null ? "" : currentUrl.replace("/mobile", "");
+        String setupHtml = "<!DOCTYPE html><html><head><meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no'>"
+                + "<style>"
+                + "* { box-sizing: border-box; margin: 0; padding: 0; }"
+                + "body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #F4F3EF; color: #111; padding: 32px 20px; min-height: 100vh; display: flex; flex-direction: column; justify-content: center; }"
+                + ".card { background: #FFFFFF; border: 1px solid #CCCCCC; padding: 28px 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); max-width: 440px; margin: 0 auto; width: 100%; }"
+                + ".brand { font-size: 11px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; color: #888; margin-bottom: 6px; font-family: monospace; }"
+                + "h1 { font-size: 20px; font-weight: 800; margin-bottom: 8px; color: #111; }"
+                + "p { font-size: 13px; color: #666; line-height: 1.5; margin-bottom: 20px; }"
+                + "label { display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #444; margin-bottom: 6px; }"
+                + "input { width: 100%; padding: 12px 14px; font-size: 14px; border: 1px solid #CCCCCC; outline: none; background: #FAFAF9; margin-bottom: 16px; font-family: monospace; }"
+                + "input:focus { border-color: #111; background: #FFF; }"
+                + "button { width: 100%; background: #111111; color: #FFFFFF; border: none; padding: 14px; font-size: 14px; font-weight: 700; cursor: pointer; text-transform: uppercase; letter-spacing: 0.5px; transition: opacity 0.2s; }"
+                + "button:active { opacity: 0.85; }"
+                + ".note { font-size: 11px; color: #888; margin-top: 14px; text-align: center; line-height: 1.4; }"
+                + "</style></head><body>"
+                + "<div class='card'>"
+                + "<div class='brand'>ZAWR INDUSTRIES &bull; MOBILE APP</div>"
+                + "<h1>Connect Mobile Server</h1>"
+                + "<p>Enter your live Vercel deployment URL or custom domain to connect this mobile app directly to your books.</p>"
+                + "<label for='urlInput'>Server / Vercel Domain</label>"
+                + "<input id='urlInput' type='text' placeholder='https://your-project.vercel.app' value='" + cleanCurrent + "' autocorrect='off' autocapitalize='none' spellcheck='false' />"
+                + "<button onclick='submitUrl()'>Save & Connect</button>"
+                + "<div class='note'>You only need to configure this once. The app will remember your server domain automatically.</div>"
+                + "</div>"
+                + "<script>"
+                + "function submitUrl() {"
+                + "  var val = document.getElementById('urlInput').value.trim();"
+                + "  if (!val) { alert('Please enter your server URL'); return; }"
+                + "  if (window.ZawrApp && window.ZawrApp.saveAndConnect) {"
+                + "    window.ZawrApp.saveAndConnect(val);"
+                + "  } else {"
+                + "    alert('Android Bridge unavailable.');"
+                + "  }"
+                + "}"
+                + "</script></body></html>";
+        mWebView.loadDataWithBaseURL(null, setupHtml, "text/html", "utf-8", null);
+    }
+
+    static class WebAppInterface {
+        private final MainActivity activity;
+
+        public WebAppInterface(MainActivity activity) {
+            this.activity = activity;
+        }
+
+        @android.webkit.JavascriptInterface
+        public void saveAndConnect(String url) {
+            if (url == null || url.trim().isEmpty()) return;
+            String clean = url.trim();
+            if (!clean.startsWith("http://") && !clean.startsWith("https://")) {
+                clean = "https://" + clean;
+            }
+            if (clean.endsWith("/")) {
+                clean = clean.substring(0, clean.length() - 1);
+            }
+            if (!clean.endsWith("/mobile")) {
+                clean += "/mobile";
+            }
+            final String finalUrl = clean;
+            activity.mPrefs.edit().putString(KEY_SERVER_URL, finalUrl).apply();
+            activity.runOnUiThread(new UrlLoaderRunnable(activity.mWebView, finalUrl));
+        }
+
+        @android.webkit.JavascriptInterface
+        public void resetServer() {
+            activity.runOnUiThread(new SetupPageRunnable(activity));
+        }
+    }
+
+    static class UrlLoaderRunnable implements Runnable {
+        private final WebView view;
+        private final String url;
+
+        public UrlLoaderRunnable(WebView view, String url) {
+            this.view = view;
+            this.url = url;
+        }
+
+        @Override
+        public void run() {
+            view.loadUrl(url);
+        }
+    }
+
+    static class SetupPageRunnable implements Runnable {
+        private final MainActivity activity;
+
+        public SetupPageRunnable(MainActivity activity) {
+            this.activity = activity;
+        }
+
+        @Override
+        public void run() {
+            activity.showSetupPage(activity.mPrefs.getString(KEY_SERVER_URL, ""));
+        }
+    }
+
+    public void handleError() {
+        runOnUiThread(new SetupPageRunnable(this));
+    }
+
     static class AppWebViewClient extends WebViewClient {
+        private final MainActivity activity;
+
+        public AppWebViewClient(MainActivity activity) {
+            this.activity = activity;
+        }
+
         @Override
         public boolean shouldOverrideUrlLoading(WebView view, String url) {
             view.loadUrl(url);
@@ -68,13 +189,7 @@ public class MainActivity extends Activity {
 
         @Override
         public void onReceivedError(WebView view, int errorCode, String description, String failingUrl) {
-            String errorHtml = "<html><body style='font-family:sans-serif;text-align:center;padding:50px 20px;background:#F4F3EF;color:#111;'>"
-                    + "<h2 style='font-size:18px;margin-bottom:10px;'>Connection Notice</h2>"
-                    + "<p style='font-size:13px;color:#666;line-height:1.5;'>Unable to reach Zawr Books Mobile server. Please ensure you are connected to the Internet.</p>"
-                    + "<p style='font-size:11px;color:#999;font-family:monospace;margin:15px 0;'>" + description + "</p>"
-                    + "<button onclick='location.reload()' style='background:#111;color:#fff;border:none;padding:10px 24px;font-size:13px;font-weight:bold;cursor:pointer;margin-top:10px;'>Retry</button>"
-                    + "</body></html>";
-            view.loadDataWithBaseURL(null, errorHtml, "text/html", "utf-8", null);
+            activity.handleError();
         }
     }
 

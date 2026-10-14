@@ -44,7 +44,7 @@ Write-Host ">>> [2/7] Linking Resources & Manifest..."
 
 Write-Host ">>> [3/7] Compiling Java Sources with JDK 21..."
 $RJava = (Get-ChildItem -Path "$WorkDir\gen" -Recurse -Filter "R.java").FullName
-& "$JdkBin\javac.exe" -source 8 -target 8 -g:none -cp "$AndroidJar" -d "$WorkDir\classes" "$RJava" "$JavaSrc"
+& "$JdkBin\javac.exe" -source 8 -target 8 -g -cp "$AndroidJar" -d "$WorkDir\classes" "$RJava" "$JavaSrc"
 
 Write-Host ">>> [4/7] Generating classes.dex with D8..."
 & "$BuildTools\d8.bat" --lib "$AndroidJar" --release --min-api 24 --output "$WorkDir" (Get-ChildItem -Path "$WorkDir\classes" -Recurse -Filter "*.class").FullName

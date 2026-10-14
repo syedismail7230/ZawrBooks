@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { TopBar } from '@/components/common/TopBar';
 import { BrandLogo } from '@/components/common/BrandLogo';
+import { AuthGuard } from '@/components/auth/AuthGuard';
 import { globalDataStore } from '@/lib/store/dataStore';
 import {
   LayoutDashboard,
@@ -67,64 +68,66 @@ export const WebLayout: React.FC<{ children: React.ReactNode }> = ({ children })
   ];
 
   return (
-    <div className="min-h-screen bg-[#F4F3EF] flex flex-col font-sans">
-      <TopBar />
+    <AuthGuard>
+      <div className="min-h-screen bg-[#F4F3EF] flex flex-col font-sans">
+        <TopBar />
 
-      <div className="flex flex-1">
-        {/* Desktop Persistent Sidebar (Zerodha style: dense, clean, restrained) */}
-        <aside className="w-56 bg-white border-r border-[#E5E5E5] flex flex-col shrink-0">
-          <div className="p-3 border-b border-[#F0EFEA] text-[10px] font-bold uppercase tracking-wider text-[#777777]">
-            Finance Navigation
-          </div>
-
-          <nav className="flex-1 py-1 overflow-y-auto">
-            {navItems.map((item) => {
-              const isActive =
-                item.href === '/web'
-                  ? pathname === '/web'
-                  : pathname.startsWith(item.href);
-
-              const Icon = item.icon;
-
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`flex items-center justify-between px-3 py-2 text-xs font-medium border-l-2 transition-colors ${
-                    isActive
-                      ? 'border-[#111111] bg-[#F4F3EF] text-[#111111] font-semibold'
-                      : 'border-transparent text-[#555555] hover:text-[#111111] hover:bg-[#FAFAF9]'
-                  }`}
-                >
-                  <div className="flex items-center gap-2.5 truncate">
-                    <Icon size={14} className={isActive ? 'text-[#111111]' : 'text-[#777777]'} />
-                    <span className="truncate">{item.name}</span>
-                  </div>
-
-                  {item.badge !== undefined && item.badge > 0 && (
-                    <span className="px-1.5 py-0.2 bg-[#FEF7E0] text-[#B25900] border border-[#FEEFC3] text-[10px] font-mono">
-                      {item.badge}
-                    </span>
-                  )}
-                </Link>
-              );
-            })}
-          </nav>
-
-          <div className="p-3 border-t border-[#E5E5E5] bg-[#FFFFFF] flex items-center gap-2.5">
-            <BrandLogo variant="icon" className="w-5 h-5 shrink-0" />
-            <div className="text-[10px] text-[#888888] leading-tight">
-              <div className="font-mono font-medium text-[#333333]">Zawr Engine v1.0</div>
-              <div>FY 2026-27 (Locked: 31-Mar-26)</div>
+        <div className="flex flex-1">
+          {/* Desktop Persistent Sidebar (Zerodha style: dense, clean, restrained) */}
+          <aside className="w-56 bg-white border-r border-[#E5E5E5] flex flex-col shrink-0">
+            <div className="p-3 border-b border-[#F0EFEA] text-[10px] font-bold uppercase tracking-wider text-[#777777]">
+              Finance Navigation
             </div>
-          </div>
-        </aside>
 
-        {/* Main Content Workspace */}
-        <main className="flex-1 overflow-x-hidden p-5">
-          <div className="max-w-7xl mx-auto space-y-5">{children}</div>
-        </main>
+            <nav className="flex-1 py-1 overflow-y-auto">
+              {navItems.map((item) => {
+                const isActive =
+                  item.href === '/web'
+                    ? pathname === '/web'
+                    : pathname.startsWith(item.href);
+
+                const Icon = item.icon;
+
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={`flex items-center justify-between px-3 py-2 text-xs font-medium border-l-2 transition-colors ${
+                      isActive
+                        ? 'border-[#111111] bg-[#F4F3EF] text-[#111111] font-semibold'
+                        : 'border-transparent text-[#555555] hover:text-[#111111] hover:bg-[#FAFAF9]'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5 truncate">
+                      <Icon size={14} className={isActive ? 'text-[#111111]' : 'text-[#777777]'} />
+                      <span className="truncate">{item.name}</span>
+                    </div>
+
+                    {item.badge !== undefined && item.badge > 0 && (
+                      <span className="px-1.5 py-0.2 bg-[#FEF7E0] text-[#B25900] border border-[#FEEFC3] text-[10px] font-mono">
+                        {item.badge}
+                      </span>
+                    )}
+                  </Link>
+                );
+              })}
+            </nav>
+
+            <div className="p-3 border-t border-[#E5E5E5] bg-[#FFFFFF] flex items-center gap-2.5">
+              <BrandLogo variant="icon" className="w-5 h-5 shrink-0" />
+              <div className="text-[10px] text-[#888888] leading-tight">
+                <div className="font-mono font-medium text-[#333333]">Zawr Engine v1.0</div>
+                <div>FY 2026-27 (Locked: 31-Mar-26)</div>
+              </div>
+            </div>
+          </aside>
+
+          {/* Main Content Workspace */}
+          <main className="flex-1 overflow-x-hidden p-5">
+            <div className="max-w-7xl mx-auto space-y-5">{children}</div>
+          </main>
+        </div>
       </div>
-    </div>
+    </AuthGuard>
   );
 };

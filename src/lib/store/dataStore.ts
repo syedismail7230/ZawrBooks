@@ -24,6 +24,7 @@ import { computeSyncHash } from '@/lib/audit/trail';
 import { evaluateExpenseApproval } from '@/lib/rbac/permissions';
 
 export interface DataStoreState {
+  isAuthenticated: boolean;
   organization: Organization | null;
   users: UserProfile[];
   currentUser: UserProfile;
@@ -59,14 +60,60 @@ export interface DataStoreState {
   }>;
 }
 
-// Default initial user when organization is first initialized
-const defaultRealAdmin: UserProfile = {
-  id: 'user-admin',
-  email: 'admin@company.com',
-  fullName: 'Administrator',
-  role: 'owner',
-  department: 'Management',
-};
+// Initial recognized organization users
+export const defaultRecognizedUsers: UserProfile[] = [
+  {
+    id: 'user-admin',
+    email: 'admin@company.com',
+    fullName: 'Administrator',
+    role: 'owner',
+    department: 'Executive Management',
+  },
+  {
+    id: 'user-ceo',
+    email: 'ceo@zawrindustries.com',
+    fullName: 'Syed Ismail (CEO)',
+    role: 'owner',
+    department: 'Executive Management',
+  },
+  {
+    id: 'user-finance',
+    email: 'accounts@zawrindustries.com',
+    fullName: 'Zawr Finance Accounts',
+    role: 'finance_admin',
+    department: 'Corporate Finance',
+  },
+  {
+    id: 'user-director',
+    email: 'md@zawrindustries.com',
+    fullName: 'Managing Director',
+    role: 'director',
+    department: 'Board of Directors',
+  },
+  {
+    id: 'user-accountant',
+    email: 'accountant@company.com',
+    fullName: 'Senior Accountant',
+    role: 'accountant',
+    department: 'Accounts & Taxation',
+  },
+  {
+    id: 'user-employee',
+    email: 'employee@company.com',
+    fullName: 'Operations Staff',
+    role: 'employee',
+    department: 'Operations',
+  },
+  {
+    id: 'user-auditor',
+    email: 'auditor@company.com',
+    fullName: 'Statutory Auditor',
+    role: 'auditor',
+    department: 'Internal Audit & Risk',
+  },
+];
+
+const defaultRealAdmin: UserProfile = defaultRecognizedUsers[0];
 
 const STORAGE_KEY = 'zawr_books_live_store_v1';
 
@@ -77,8 +124,9 @@ class DataStore {
 
   constructor() {
     this.state = {
+      isAuthenticated: false,
       organization: null, // Zero mock data: starts empty until user configures organization
-      users: [defaultRealAdmin],
+      users: [...defaultRecognizedUsers],
       currentUser: defaultRealAdmin,
       accounts: [],
       journalEntries: [],
@@ -107,7 +155,22 @@ class DataStore {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
-        this.state = { ...this.state, ...parsed };
+        
+        // Merge recognized users if any missing
+        const existingUsers: UserProfile[] = parsed.users || [];
+        const mergedUsers = [...existingUsers];
+        for (const defaultUser of defaultRecognizedUsers) {
+          if (!mergedUsers.some((u) => u.email.toLowerCase() === defaultUser.email.toLowerCase())) {
+            mergedUsers.push(defaultUser);
+          }
+        }
+
+        this.state = {
+          ...this.state,
+          ...parsed,
+          users: mergedUsers,
+          isAuthenticated: typeof parsed.isAuthenticated === 'boolean' ? parsed.isAuthenticated : false,
+        };
         this.isLoadedFromStorage = true;
       }
     } catch (e) {
@@ -181,6 +244,88 @@ class DataStore {
 
     this.persist();
     return organization;
+  }
+
+  // Authenticate & Log In
+  public login(user: UserProfile) {
+    this.state.isAuthenticated = true;
+    this.state.currentUser = user;
+    user.lastLoginAt = new Date().toISOString();
+    const idx = this.state.users.findIndex((u) => u.id === user.id);
+    if (idx !== -1) {
+      this.state.users[idx] = { ...user };
+    }
+    this.recordAuditEvent('USER_LOGIN', 'UserProfile', user.id, null, {
+      email: user.email,
+      role: user.role,
+      loginAt: user.lastLoginAt,
+    });
+    this.persist();
+  }
+
+  // Log Out Active User
+  public logout() {
+    const user = this.state.currentUser;
+    this.recordAuditEvent('USER_LOGOUT', 'UserProfile', user.id, null, {
+      email: user.email,
+    });
+    this.state.isAuthenticated = false;
+    this.persist();
+  }
+
+  // Find user by email (case-insensitive)
+  public findUserByEmail(email: string): UserProfile | undefined {
+    const normalized = email.trim().toLowerCase();
+    return this.state.users.find((u) => u.email.trim().toLowerCase() === normalized);
+  }
+
+  // Find or automatically provision recognized user
+  public findOrCreateUser(email: string, role?: import('@/types').UserRole, fullName?: string): UserProfile {
+    const existing = this.findUserByEmail(email);
+    if (existing) {
+      return existing;
+    }
+    const namePart = email.split('@')[0];
+    const derivedName = fullName || namePart.replace(/[._-]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+    
+    // Assign appropriate initial role
+    let derivedRole: import('@/types').UserRole = role || 'accountant';
+    if (email.includes('admin') || email.includes('ceo') || email.includes('ismail')) {
+      derivedRole = 'owner';
+    } else if (email.includes('director') || email.includes('md')) {
+      derivedRole = 'director';
+    } else if (email.includes('finance') || email.includes('accounts')) {
+      derivedRole = 'finance_admin';
+    } else if (email.includes('employee') || email.includes('staff')) {
+      derivedRole = 'employee';
+    } else if (email.includes('audit')) {
+      derivedRole = 'auditor';
+    }
+
+    return this.addUser({
+      email: email.trim().toLowerCase(),
+      fullName: derivedName,
+      role: derivedRole,
+      department: derivedRole === 'owner' || derivedRole === 'director' ? 'Executive Management' : 'Finance & Operations',
+    });
+  }
+
+  // Set / Update User Password
+  public setUserPassword(userIdOrEmail: string, passwordHash: string): boolean {
+    const user = this.state.users.find(
+      (u) => u.id === userIdOrEmail || u.email.trim().toLowerCase() === userIdOrEmail.trim().toLowerCase()
+    );
+    if (!user) return false;
+    user.passwordHash = passwordHash;
+    if (this.state.currentUser.id === user.id) {
+      this.state.currentUser.passwordHash = passwordHash;
+    }
+    this.recordAuditEvent('SET_PASSWORD', 'UserProfile', user.id, null, {
+      email: user.email,
+      timestamp: new Date().toISOString(),
+    });
+    this.persist();
+    return true;
   }
 
   // Switch Active User / RBAC Role

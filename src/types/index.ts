@@ -28,6 +28,8 @@ export interface UserProfile {
   role: UserRole;
   avatarUrl?: string;
   department?: string;
+  passwordHash?: string;
+  lastLoginAt?: string;
 }
 
 export interface Organization {

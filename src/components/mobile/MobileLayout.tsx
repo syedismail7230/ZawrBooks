@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { TopBar } from '@/components/common/TopBar';
+import { AuthGuard } from '@/components/auth/AuthGuard';
 import { ReceiptScannerModal } from '@/components/scanner/ReceiptScannerModal';
 import { Home, Scan, FileText, Bell, User } from 'lucide-react';
 
@@ -20,12 +21,13 @@ export const MobileLayout: React.FC<{ children: React.ReactNode }> = ({ children
   ];
 
   return (
-    <div className="min-h-screen bg-[#F4F3EF] flex flex-col font-sans pb-16">
-      <TopBar />
+    <AuthGuard>
+      <div className="min-h-screen bg-[#F4F3EF] flex flex-col font-sans pb-16">
+        <TopBar />
 
-      <main className="flex-1 max-w-md mx-auto w-full p-4 space-y-4">
-        {children}
-      </main>
+        <main className="flex-1 max-w-md mx-auto w-full p-4 space-y-4">
+          {children}
+        </main>
 
       {/* Mobile Fixed Bottom Navigation (PRD Section 4.2) */}
       <nav className="fixed bottom-0 inset-x-0 bg-white border-t border-[#E5E5E5] z-50">
@@ -68,6 +70,7 @@ export const MobileLayout: React.FC<{ children: React.ReactNode }> = ({ children
         isOpen={isScannerOpen}
         onClose={() => setIsScannerOpen(false)}
       />
-    </div>
+      </div>
+    </AuthGuard>
   );
 };

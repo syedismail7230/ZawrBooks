@@ -12,7 +12,6 @@ import {
   Scan,
   Plus,
   Shield,
-  Smartphone,
   Laptop,
   LogOut,
   KeyRound,

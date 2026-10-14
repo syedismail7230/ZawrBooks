@@ -69,6 +69,8 @@ Write-Host ">>> Verification:"
 & "$BuildTools\apksigner.bat" verify "$FinalApk"
 
 $ApkInfo = Get-Item "$FinalApk"
+Copy-Item -Path "$FinalApk" -Destination "$ProjectRoot\public\ZawrBooks.apk" -Force
+Write-Host ">>> Copied APK to public/ZawrBooks.apk for direct web & mobile download"
 Write-Host "=========================================="
 Write-Host "SUCCESS! Android APK Generated:"
 Write-Host "Path: $($ApkInfo.FullName)"

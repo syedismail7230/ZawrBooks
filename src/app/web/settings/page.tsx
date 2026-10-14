@@ -5,7 +5,7 @@ import { WebLayout } from '@/components/web/WebLayout';
 import { Card } from '@/components/common/Card';
 import { Button } from '@/components/common/Button';
 import { globalDataStore } from '@/lib/store/dataStore';
-import { Sliders, Lock, Save, Smartphone, Download, ShieldCheck, CheckCircle2 } from 'lucide-react';
+import { Sliders, Lock, Save, Download, ShieldCheck, CheckCircle2 } from 'lucide-react';
 
 export default function SettingsPage() {
   const [storeState, setStoreState] = useState(globalDataStore.getState());
@@ -84,8 +84,12 @@ export default function SettingsPage() {
         >
           <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 p-1">
             <div className="flex items-start gap-4">
-              <div className="w-14 h-14 bg-[#111111] text-white flex items-center justify-center rounded-xl shrink-0 shadow-sm border border-gray-800">
-                <Smartphone size={28} className="text-white" />
+              <div className="w-14 h-14 rounded-2xl bg-white border border-[#E5E5E5] p-2 shadow-sm flex items-center justify-center shrink-0">
+                <img
+                  src="/favicon.png"
+                  alt="Zawr Books App Icon"
+                  className="w-full h-full object-contain"
+                />
               </div>
               <div className="space-y-1">
                 <div className="flex items-center gap-2 flex-wrap">
@@ -105,7 +109,7 @@ export default function SettingsPage() {
                   <span>•</span>
                   <span>Arch: Universal</span>
                   <span>•</span>
-                  <span>Size: ~73 KB</span>
+                  <span>Size: ~97 KB</span>
                 </div>
               </div>
             </div>

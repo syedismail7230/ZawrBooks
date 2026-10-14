@@ -14,7 +14,6 @@ import {
   Edit3,
   Check,
   Laptop,
-  Smartphone,
   LogOut,
   Mail,
   Building2,
@@ -233,12 +232,16 @@ export default function MobileProfilePage() {
       <Card noPadding className="shadow-2xs">
         <div className="p-3.5 bg-white flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-[#111111] text-white flex items-center justify-center rounded-lg shrink-0">
-              <Smartphone size={20} />
+            <div className="w-10 h-10 rounded-xl bg-white border border-[#E5E5E5] p-1.5 shadow-xs flex items-center justify-center shrink-0">
+              <img
+                src="/favicon.png"
+                alt="Zawr Books App Icon"
+                className="w-full h-full object-contain"
+              />
             </div>
             <div>
               <div className="text-xs font-bold text-[#111111]">Zawr Books for Android</div>
-              <div className="text-[10px] text-[#666666]">v1.0.0 Stable • Signed APK (~73 KB)</div>
+              <div className="text-[10px] text-[#666666]">v1.0.0 Stable • Signed APK (~97 KB)</div>
             </div>
           </div>
           <a

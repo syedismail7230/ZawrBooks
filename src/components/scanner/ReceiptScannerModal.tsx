@@ -503,9 +503,9 @@ export const ReceiptScannerModal: React.FC<ReceiptScannerModalProps> = ({
           <div className="relative z-10 flex flex-col items-center justify-center px-6 my-auto">
             {/* Rounded Rectangle Viewfinder Frame */}
             <div className="w-[82vw] max-w-[340px] aspect-[3/4] border-2 border-white/90 rounded-3xl relative overflow-hidden shadow-2xl backdrop-contrast-105">
-              {/* Animated Glowing Laser Scanning Beam */}
-              <div className="absolute inset-x-0 h-1 bg-gradient-to-r from-transparent via-purple-400 to-transparent shadow-[0_0_18px_rgba(168,85,247,0.9)] animate-scan-beam" />
-              <div className="absolute inset-x-0 h-20 bg-gradient-to-b from-purple-500/20 to-transparent pointer-events-none animate-scan-aura" />
+              {/* Animated Glowing Laser Scanning Beam - Platform Emerald Theme */}
+              <div className="absolute inset-x-0 h-1 bg-gradient-to-r from-transparent via-emerald-400 to-transparent shadow-[0_0_18px_rgba(16,185,129,0.95)] animate-scan-beam" />
+              <div className="absolute inset-x-0 h-20 bg-gradient-to-b from-emerald-500/20 to-transparent pointer-events-none animate-scan-aura" />
 
               {/* Corner Bracket Accents */}
               <div className="absolute top-2.5 left-2.5 w-6 h-6 border-t-2 border-l-2 border-white rounded-tl-sm pointer-events-none" />
@@ -516,7 +516,7 @@ export const ReceiptScannerModal: React.FC<ReceiptScannerModalProps> = ({
               {/* State if starting */}
               {isCameraStarting && (
                 <div className="absolute inset-0 bg-black/75 flex flex-col items-center justify-center text-white gap-2 z-10">
-                  <div className="w-8 h-8 border-2 border-purple-400 border-t-transparent animate-spin rounded-full" />
+                  <div className="w-8 h-8 border-2 border-emerald-400 border-t-transparent animate-spin rounded-full" />
                   <span className="text-[11px] font-medium tracking-wider uppercase text-gray-200">
                     Starting Camera...
                   </span>
@@ -527,7 +527,7 @@ export const ReceiptScannerModal: React.FC<ReceiptScannerModalProps> = ({
               {!isCameraActive && !isCameraStarting && (
                 <div className="absolute inset-0 bg-black/80 p-5 flex flex-col items-center justify-center text-center text-white space-y-3 z-10">
                   <div className="p-3 bg-white/10 rounded-full border border-white/20">
-                    <Camera size={26} className="text-purple-300" />
+                    <Camera size={26} className="text-white" />
                   </div>
                   <div>
                     <div className="text-xs font-bold uppercase tracking-wider text-white">
@@ -548,19 +548,19 @@ export const ReceiptScannerModal: React.FC<ReceiptScannerModalProps> = ({
               )}
             </div>
 
-            {/* Status Pill below Frame (Matches Image 2!) */}
-            <div className="mt-4 px-4 py-1.5 rounded-full bg-black/60 backdrop-blur-md border border-white/20 text-white text-[11px] font-medium flex items-center gap-2 shadow-lg">
+            {/* Status Pill below Frame - Platform Live Status Indicator */}
+            <div className="mt-4 px-4 py-1.5 rounded-full bg-black/70 backdrop-blur-md border border-white/20 text-white text-[11px] font-medium flex items-center gap-2 shadow-lg">
               <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-purple-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-purple-500"></span>
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
               </span>
-              <span>Align receipt inside frame</span>
+              <span className="tracking-wide">Align receipt inside frame</span>
             </div>
           </div>
 
-          {/* Bottom Floating Pill Dock (Matches Image 2!) */}
+          {/* Bottom Floating Pill Dock - Platform Brand Theme */}
           <div className="relative z-20 px-6 pb-[max(1.8rem,env(safe-area-inset-bottom))] flex items-center justify-center">
-            <div className="bg-[#18181B]/95 backdrop-blur-2xl border border-white/15 rounded-full px-8 py-3.5 flex items-center gap-9 shadow-2xl">
+            <div className="bg-[#111111]/95 backdrop-blur-2xl border border-white/20 rounded-full px-8 py-3.5 flex items-center gap-9 shadow-2xl">
               {/* Left: Home / Close */}
               <button
                 type="button"
@@ -568,27 +568,30 @@ export const ReceiptScannerModal: React.FC<ReceiptScannerModalProps> = ({
                   stopCamera();
                   onClose();
                 }}
-                className="p-2 text-gray-300 hover:text-white active:scale-90 transition-transform cursor-pointer"
+                className="p-2 text-gray-400 hover:text-white active:scale-90 transition-transform cursor-pointer"
                 title="Return to Home"
               >
                 <Home size={22} />
               </button>
 
-              {/* Center: Large Glowing Purple Shutter Button */}
+              {/* Center: Signature Platform Shutter Button (Jet Black, Stark White Border, Emerald Target Dot) */}
               <button
                 type="button"
                 onClick={handleShutterClick}
-                className="w-16 h-16 -my-4 rounded-full bg-gradient-to-tr from-[#6366F1] to-[#8B5CF6] text-white shadow-[0_0_25px_rgba(139,92,246,0.7)] flex items-center justify-center active:scale-90 hover:scale-105 transition-all cursor-pointer border-2 border-white/30"
+                className="w-16 h-16 -my-4 rounded-full bg-[#111111] hover:bg-black text-white shadow-[0_0_24px_rgba(16,185,129,0.35)] flex items-center justify-center active:scale-90 hover:scale-105 transition-all cursor-pointer border-2 border-white ring-2 ring-emerald-500/50"
                 title="Capture / Scan Receipt"
               >
-                <Scan size={28} className="stroke-[2.5]" />
+                <span className="relative flex items-center justify-center">
+                  <Scan size={28} className="stroke-[2.2] text-white" />
+                  <span className="absolute w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_#10B981]"></span>
+                </span>
               </button>
 
               {/* Right: Gallery Upload */}
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="p-2 text-gray-300 hover:text-white active:scale-90 transition-transform cursor-pointer"
+                className="p-2 text-gray-400 hover:text-white active:scale-90 transition-transform cursor-pointer"
                 title="Upload from Photo Gallery"
               >
                 <ImageIcon size={22} />

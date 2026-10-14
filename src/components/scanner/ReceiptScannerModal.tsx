@@ -6,6 +6,7 @@ import { Button } from '@/components/common/Button';
 import { Badge } from '@/components/common/Badge';
 import { CurrencyDisplay } from '@/components/common/CurrencyDisplay';
 import { parseReceiptText } from '@/lib/ocr/extractor';
+import { preprocessReceiptImage } from '@/lib/cv/receiptCvProcessor';
 import { globalDataStore } from '@/lib/store/dataStore';
 import { ExtractedReceiptData } from '@/types';
 import { rupeesToPaise } from '@/lib/accounting/engine';
@@ -31,6 +32,7 @@ import {
   X,
   Home,
   Scan,
+  ArrowRight,
 } from 'lucide-react';
 import Tesseract from 'tesseract.js';
 
@@ -348,34 +350,46 @@ export const ReceiptScannerModal: React.FC<ReceiptScannerModalProps> = ({
     setStep(2);
     setIsScanning(true);
     setDuplicateWarning(null);
-    setScanStatusMessage('Recognizing vendor, invoice number, and GSTIN...');
+    setScanStatusMessage('Enhancing image with OpenCV computer vision filters...');
 
     try {
-      // Step 2a: Call Server-Side API endpoint (/api/ocr/extract)
-      const res = await fetch('/api/ocr/extract', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ fileData: fileDataUrl, fileName: name }),
+      // 1. High-Speed Client-Side Computer Vision Preprocessing (OpenCV equivalent)
+      // Removes camera shadows, flash glares, and binarizes thermal paper text
+      const cvResult = await preprocessReceiptImage(fileDataUrl, {
+        maxDimension: 1400,
+        applyContrastStretch: true,
+        applyBinarization: true,
       });
 
-      if (res.ok) {
-        const json = await res.json();
-        if (json.success && json.data) {
-          applyExtractedData(json.data, json.rawText);
-          setStep(3);
-          return;
-        }
-      }
+      // Preserve original high-res picture for human inspection in Review step
+      setSelectedImageDataUrl(fileDataUrl);
 
-      // Step 2b: Client-side Fallback using Tesseract.js directly in browser
-      setScanStatusMessage('Running high-accuracy local optical engine...');
-      const { data: { text } } = await Tesseract.recognize(fileDataUrl, 'eng');
-      const parsed = parseReceiptText(text || '', name);
-      applyExtractedData(parsed, text);
+      setScanStatusMessage('Extracting Indian GST, vendor, invoice number, and amounts...');
+
+      // 2. High-Accuracy Optical Engine with 4.5s strict timeout guarantee
+      const ocrTask = (async (): Promise<string> => {
+        try {
+          const { data: { text } } = await Tesseract.recognize(cvResult.processedDataUrl, 'eng');
+          return text || '';
+        } catch (tessErr) {
+          console.warn('Browser optical engine notice:', tessErr);
+          return '';
+        }
+      })();
+
+      const timeoutTask = new Promise<string>((resolve) =>
+        setTimeout(() => resolve(''), 4500)
+      );
+
+      // Race between optical extraction and guaranteed timeout
+      const rawText = await Promise.race([ocrTask, timeoutTask]);
+
+      // 3. Rule-Based Accounting Parser (GSTIN, PAN, Invoice #, CGST/SGST/IGST, Totals)
+      const parsed = parseReceiptText(rawText, name);
+      applyExtractedData(parsed, rawText);
       setStep(3);
     } catch (err) {
-      console.warn('OCR processing encounter:', err);
-      // Fallback clean extraction so user can still manually review with the image displayed
+      console.warn('Computer vision extraction notice:', err);
       const fallback = parseReceiptText('', name);
       applyExtractedData(fallback);
       setStep(3);
@@ -616,18 +630,33 @@ export const ReceiptScannerModal: React.FC<ReceiptScannerModalProps> = ({
 
       {/* Step 2: OCR Scanning in progress with live status */}
       {step === 2 && (
-        <div className="py-14 text-center space-y-4">
+        <div className="py-12 text-center space-y-4">
           <div className="inline-flex p-4 bg-[#F4F3EF] border border-[#E5E5E5] animate-pulse">
             <Sparkles size={36} className="text-[#111111]" />
           </div>
           <h4 className="text-sm font-bold uppercase tracking-wider text-[#111111]">
             Analyzing Financial Document
           </h4>
-          <p className="text-xs text-[#666666] max-w-sm mx-auto">
+          <p className="text-xs text-[#666666] max-w-sm mx-auto font-medium">
             {scanStatusMessage}
           </p>
-          <div className="w-48 h-1.5 bg-[#E5E5E5] mx-auto overflow-hidden rounded-full">
-            <div className="h-full bg-black animate-pulse w-3/4"></div>
+          <div className="w-56 h-1.5 bg-[#E5E5E5] mx-auto overflow-hidden rounded-full">
+            <div className="h-full bg-emerald-500 animate-pulse w-3/4"></div>
+          </div>
+
+          <div className="pt-3">
+            <button
+              type="button"
+              onClick={() => {
+                const fallback = parseReceiptText('', fileName);
+                applyExtractedData(fallback);
+                setStep(3);
+              }}
+              className="px-4 py-1.5 bg-[#111111] hover:bg-black text-white text-xs font-semibold rounded-xs border border-[#111111] transition-all cursor-pointer inline-flex items-center gap-1.5 shadow-sm active:scale-95"
+            >
+              <span>Proceed to Review</span>
+              <ArrowRight size={13} />
+            </button>
           </div>
         </div>
       )}

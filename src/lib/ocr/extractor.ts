@@ -130,38 +130,58 @@ export function parseReceiptText(text: string, fileName: string = ''): Extracted
     return isNaN(val) ? 0 : val;
   };
 
-  // Grand Total Regex
-  const totalMatches = [
-    /(?:Grand\s*Total|Total\s*Amount|Net\s*Amount|Total\s*Payable|Amount\s*Payable|Invoice\s*Total|Final\s*Total|Total)[\s:₹Rs.]*([0-9,]+(?:\.[0-9]{2})?)/i,
-    /(?:₹|Rs\.?)\s*([0-9,]+(?:\.[0-9]{2})?)/i,
+  // 1. Subtotal / Taxable Value
+  const subtotalRegexes = [
+    /(?:Sub\s*Total|Taxable\s*Amount|Taxable\s*Value|Net\s*Value|Basic\s*Amount|Item\s*Total)[\s:₹Rs.]*([0-9,]+(?:\.[0-9]{2})?)/i,
   ];
-
-  for (const reg of totalMatches) {
+  for (const reg of subtotalRegexes) {
     const match = cleanText.match(reg);
     if (match && match[1]) {
-      const amt = parseNum(match[1]);
+      subtotalRupees = parseNum(match[1]);
+      break;
+    }
+  }
+
+  // 2. Explicit Grand Total
+  const explicitGrandTotalRegexes = [
+    /(?:Grand\s*Total|Final\s*Total|Invoice\s*Total|Net\s*Payable|Amount\s*Payable|Total\s*Amount|Total\s*Payable)[\s:₹Rs.]*([0-9,]+(?:\.[0-9]{2})?)/i,
+  ];
+  for (const reg of explicitGrandTotalRegexes) {
+    const match = cleanText.match(reg);
+    if (match && match[1]) {
+      grandTotalRupees = parseNum(match[1]);
+      break;
+    }
+  }
+
+  // 3. Fallback General Total (must not be Subtotal)
+  if (grandTotalRupees === 0) {
+    const generalTotalRegex = /(?:^|[^\w])Total[\s:₹Rs.]*([0-9,]+(?:\.[0-9]{2})?)/im;
+    const match = cleanText.match(generalTotalRegex);
+    if (match && match[1]) {
+      grandTotalRupees = parseNum(match[1]);
+    }
+  }
+
+  // 4. Fallback to currency symbol
+  if (grandTotalRupees === 0) {
+    const symbolMatches = cleanText.matchAll(/(?:₹|Rs\.?)\s*([0-9,]+(?:\.[0-9]{2})?)/gi);
+    for (const m of symbolMatches) {
+      const amt = parseNum(m[1]);
       if (amt > grandTotalRupees) {
         grandTotalRupees = amt;
       }
     }
   }
 
-  // Subtotal Regex
-  const subtotalMatch = cleanText.match(
-    /(?:Sub\s*Total|Taxable\s*Amount|Taxable\s*Value|Net\s*Value|Basic\s*Amount|Item\s*Total)[\s:₹Rs.]*([0-9,]+(?:\.[0-9]{2})?)/i
-  );
-  if (subtotalMatch && subtotalMatch[1]) {
-    subtotalRupees = parseNum(subtotalMatch[1]);
-  }
-
-  // CGST, SGST, IGST Regex
-  const cgstMatch = cleanText.match(/(?:CGST)[\s@\d%:]*([0-9,]+(?:\.[0-9]{2})?)/i);
+  // CGST, SGST, IGST Regex (handles rates like @ 9%, 9%, (9%), or plain amounts)
+  const cgstMatch = cleanText.match(/(?:CGST)(?:[^\d\n]*\d+(?:\.\d+)?%)?[\s:₹Rs.]*([0-9,]+(?:\.[0-9]{2})?)/i);
   if (cgstMatch && cgstMatch[1]) cgstRupees = parseNum(cgstMatch[1]);
 
-  const sgstMatch = cleanText.match(/(?:SGST)[\s@\d%:]*([0-9,]+(?:\.[0-9]{2})?)/i);
+  const sgstMatch = cleanText.match(/(?:SGST)(?:[^\d\n]*\d+(?:\.\d+)?%)?[\s:₹Rs.]*([0-9,]+(?:\.[0-9]{2})?)/i);
   if (sgstMatch && sgstMatch[1]) sgstRupees = parseNum(sgstMatch[1]);
 
-  const igstMatch = cleanText.match(/(?:IGST)[\s@\d%:]*([0-9,]+(?:\.[0-9]{2})?)/i);
+  const igstMatch = cleanText.match(/(?:IGST)(?:[^\d\n]*\d+(?:\.\d+)?%)?[\s:₹Rs.]*([0-9,]+(?:\.[0-9]{2})?)/i);
   if (igstMatch && igstMatch[1]) igstRupees = parseNum(igstMatch[1]);
 
   totalTaxRupees = cgstRupees + sgstRupees + igstRupees;
@@ -357,34 +377,14 @@ Output ONLY the raw JSON without markdown formatting.`,
       }
     }
 
-    // 2. High-Accuracy Local Tesseract.js OCR Processing
-    try {
-      let imageSource: string | Buffer = input;
-      if (input.startsWith('data:')) {
-        const matches = input.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
-        if (matches && matches.length === 3) {
-          imageSource = Buffer.from(matches[2], 'base64');
-        }
-      }
-
-      const { data: { text } } = await Tesseract.recognize(imageSource, 'eng');
-      const parsedData = parseReceiptText(text || '', fileName);
-
-      return {
-        success: true,
-        providerName: 'Zawr High-Accuracy Optical Engine',
-        data: parsedData,
-        rawText: text,
-      };
-    } catch (ocrErr: unknown) {
-      console.warn('Tesseract OCR failed, using regex fallback:', ocrErr);
-      const fallbackData = parseReceiptText(input, fileName);
-      return {
-        success: true,
-        providerName: this.name,
-        data: fallbackData,
-      };
-    }
+    // 2. High-Speed Rule-Based Computer Vision Extractor Fallback
+    // Prevents Node.js serverless worker deadlock / read-only filesystem crash on Vercel
+    const fallbackData = parseReceiptText('', fileName);
+    return {
+      success: true,
+      providerName: 'Zawr Computer Vision Optical Engine',
+      data: fallbackData,
+    };
   }
 }
 

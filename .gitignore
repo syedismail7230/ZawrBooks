@@ -45,3 +45,7 @@ next-env.d.ts
 .gradle/
 android/.gradle/
 android/**/build/
+
+# ocr data
+*.traineddata*
+

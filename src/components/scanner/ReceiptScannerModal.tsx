@@ -88,6 +88,7 @@ export const ReceiptScannerModal: React.FC<ReceiptScannerModalProps> = ({
   const [businessPurpose, setBusinessPurpose] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('UPI / Corporate Card');
   const [isReimbursable, setIsReimbursable] = useState(true);
+  const [submissionType, setSubmissionType] = useState<'expense' | 'vendor_bill'>('expense');
 
   const [extractedData, setExtractedData] = useState<ExtractedReceiptData | null>(null);
   const [duplicateWarning, setDuplicateWarning] = useState<string | null>(null);
@@ -350,46 +351,81 @@ export const ReceiptScannerModal: React.FC<ReceiptScannerModalProps> = ({
     setStep(2);
     setIsScanning(true);
     setDuplicateWarning(null);
-    setScanStatusMessage('Enhancing image with OpenCV computer vision filters...');
+    setScanStatusMessage('Enhancing document image with OpenCV computer vision filters...');
 
     try {
-      // 1. High-Speed Client-Side Computer Vision Preprocessing (OpenCV equivalent)
-      // Removes camera shadows, flash glares, and binarizes thermal paper text
-      const cvResult = await preprocessReceiptImage(fileDataUrl, {
-        maxDimension: 1400,
-        applyContrastStretch: true,
-        applyBinarization: true,
-      });
+      // 1. High-Speed Client-Side Computer Vision Preprocessing
+      let processedDataUrl = fileDataUrl;
+      try {
+        const cvResult = await preprocessReceiptImage(fileDataUrl, {
+          maxDimension: 1400,
+          applyContrastStretch: true,
+          applyBinarization: true,
+        });
+        processedDataUrl = cvResult.processedDataUrl;
+      } catch (cvErr) {
+        console.warn('Preprocessing notice:', cvErr);
+      }
 
       // Preserve original high-res picture for human inspection in Review step
       setSelectedImageDataUrl(fileDataUrl);
 
       setScanStatusMessage('Extracting Indian GST, vendor, invoice number, and amounts...');
 
-      // 2. High-Accuracy Optical Engine with 4.5s strict timeout guarantee
-      const ocrTask = (async (): Promise<string> => {
+      let extracted: ExtractedReceiptData | null = null;
+      let rawText = '';
+
+      // 2. High-Accuracy Server OCR Endpoint (Google Gemini 1.5 Flash Vision or Node.js Tesseract)
+      try {
+        const apiRes = await fetch('/api/ocr/extract', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ fileData: fileDataUrl, fileName: name }),
+        });
+
+        if (apiRes.ok) {
+          const apiJson = await apiRes.json();
+          if (apiJson.success && apiJson.data) {
+            extracted = apiJson.data;
+            rawText = apiJson.rawText || '';
+          }
+        }
+      } catch (apiErr) {
+        console.warn('Server OCR endpoint notice:', apiErr);
+      }
+
+      // 3. Fallback to client-side Optical Engine with timeout if server returned empty amounts
+      if (!extracted || (!extracted.merchantName?.value && !extracted.grandTotalPaise?.value)) {
         try {
-          const { data: { text } } = await Tesseract.recognize(cvResult.processedDataUrl, 'eng');
-          return text || '';
+          setScanStatusMessage('Running in-browser Optical Character Recognition engine...');
+          const ocrTask = (async (): Promise<string> => {
+            const { data: { text } } = await Tesseract.recognize(processedDataUrl, 'eng');
+            return text || '';
+          })();
+
+          const timeoutTask = new Promise<string>((resolve) =>
+            setTimeout(() => resolve(''), 10000)
+          );
+
+          const clientRaw = await Promise.race([ocrTask, timeoutTask]);
+          if (clientRaw && clientRaw.trim().length > 0) {
+            rawText = clientRaw;
+            extracted = parseReceiptText(clientRaw, name);
+          }
         } catch (tessErr) {
           console.warn('Browser optical engine notice:', tessErr);
-          return '';
         }
-      })();
+      }
 
-      const timeoutTask = new Promise<string>((resolve) =>
-        setTimeout(() => resolve(''), 4500)
-      );
+      // 4. Fallback to rule-based parser with filename heuristic
+      if (!extracted) {
+        extracted = parseReceiptText('', name);
+      }
 
-      // Race between optical extraction and guaranteed timeout
-      const rawText = await Promise.race([ocrTask, timeoutTask]);
-
-      // 3. Rule-Based Accounting Parser (GSTIN, PAN, Invoice #, CGST/SGST/IGST, Totals)
-      const parsed = parseReceiptText(rawText, name);
-      applyExtractedData(parsed, rawText);
+      applyExtractedData(extracted, rawText);
       setStep(3);
     } catch (err) {
-      console.warn('Computer vision extraction notice:', err);
+      console.warn('Document extraction notice:', err);
       const fallback = parseReceiptText('', name);
       applyExtractedData(fallback);
       setStep(3);
@@ -402,6 +438,33 @@ export const ReceiptScannerModal: React.FC<ReceiptScannerModalProps> = ({
     const grandTotalPaise = rupeesToPaise(grandTotalRupees);
     const subtotalPaise = rupeesToPaise(subtotalRupees);
     const totalTaxPaise = rupeesToPaise(taxRupees);
+
+    if (submissionType === 'vendor_bill') {
+      // Ensure vendor exists in system
+      let vend = store.vendors.find((v) => v.name.toLowerCase() === (merchantName || 'Direct Vendor').toLowerCase());
+      if (!vend) {
+        vend = globalDataStore.addVendor({
+          name: merchantName || 'Direct Vendor',
+          legalName: merchantName || 'Direct Vendor',
+          gstin: vendorGstin || '',
+          pan: vendorGstin ? vendorGstin.slice(2, 12) : '',
+          email: '',
+          phone: '',
+          billingAddress: 'Registered Vendor Address',
+        });
+      }
+
+      globalDataStore.addVendorBill({
+        vendorId: vend.id,
+        vendorName: vend.name,
+        billNumber: invoiceNumber || `BILL-${Date.now().toString().slice(-6)}`,
+        billDate: invoiceDate || new Date().toISOString().split('T')[0],
+        dueDate: invoiceDate || new Date().toISOString().split('T')[0],
+        subtotalPaise: subtotalPaise || grandTotalPaise,
+        taxPaise: totalTaxPaise,
+        totalPaise: grandTotalPaise,
+      });
+    }
 
     globalDataStore.submitExpense({
       employeeId: store.currentUser?.id || 'usr-active',
@@ -423,8 +486,8 @@ export const ReceiptScannerModal: React.FC<ReceiptScannerModalProps> = ({
       isTaxIncluded: true,
       businessPurpose: businessPurpose || 'Business necessity',
       paymentMethod,
-      isReimbursable,
-      reimbursementStatus: isReimbursable ? 'Pending' : 'Not Applicable',
+      isReimbursable: submissionType === 'expense' ? isReimbursable : false,
+      reimbursementStatus: submissionType === 'expense' && isReimbursable ? 'Pending' : 'Not Applicable',
       extractedData: extractedData || undefined,
     });
 
@@ -756,6 +819,44 @@ export const ReceiptScannerModal: React.FC<ReceiptScannerModalProps> = ({
 
             {/* Right: Editable Extracted Fields */}
             <div className="space-y-3">
+              {/* Submission Type Switcher */}
+              <div className="bg-white border border-[#CCCCCC] p-2 flex items-center justify-between text-xs">
+                <span className="font-semibold text-[#333333]">Bill Record Type:</span>
+                <div className="flex items-center gap-3">
+                  <label className="flex items-center gap-1.5 cursor-pointer font-medium">
+                    <input
+                      type="radio"
+                      name="submissionType"
+                      checked={submissionType === 'expense'}
+                      onChange={() => setSubmissionType('expense')}
+                      className="accent-black"
+                    />
+                    <span>Employee Expense Claim</span>
+                  </label>
+                  <label className="flex items-center gap-1.5 cursor-pointer font-medium">
+                    <input
+                      type="radio"
+                      name="submissionType"
+                      checked={submissionType === 'vendor_bill'}
+                      onChange={() => setSubmissionType('vendor_bill')}
+                      className="accent-black"
+                    />
+                    <span>Vendor / Supplier Bill</span>
+                  </label>
+                </div>
+              </div>
+
+              {/* Extraction Highlights Banner */}
+              <div className="bg-[#E6F4EA] border border-[#CEEAD6] p-2 text-[11px] text-[#137333] flex items-center flex-wrap gap-2">
+                <span className="font-bold flex items-center gap-1">
+                  <Sparkles size={12} /> Auto-Extracted Details:
+                </span>
+                {merchantName && <span className="bg-white/80 px-1.5 py-0.5 rounded-xs border border-[#CEEAD6]">✓ Vendor: {merchantName}</span>}
+                {vendorGstin && <span className="bg-white/80 px-1.5 py-0.5 rounded-xs border border-[#CEEAD6] font-mono">✓ GSTIN: {vendorGstin}</span>}
+                {grandTotalRupees && <span className="bg-white/80 px-1.5 py-0.5 rounded-xs border border-[#CEEAD6] font-bold">✓ Total: ₹{grandTotalRupees}</span>}
+                {invoiceNumber && <span className="bg-white/80 px-1.5 py-0.5 rounded-xs border border-[#CEEAD6] font-mono">✓ #{invoiceNumber}</span>}
+              </div>
+
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <label className="block text-[11px] font-medium text-[#666666] mb-1">
@@ -954,7 +1055,7 @@ export const ReceiptScannerModal: React.FC<ReceiptScannerModalProps> = ({
               disabled={!grandTotalRupees || parseFloat(grandTotalRupees) <= 0}
               className="w-full sm:w-auto font-bold"
             >
-              Submit Expense for Approval
+              {submissionType === 'vendor_bill' ? 'Submit Vendor Bill for Approval' : 'Submit Expense for Approval'}
             </Button>
           </div>
         </div>

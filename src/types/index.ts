@@ -259,7 +259,7 @@ export interface VendorBill {
   billNumber: string;
   billDate: string;
   dueDate: string;
-  status: 'Draft' | 'Approved' | 'Partially Paid' | 'Paid' | 'Overdue';
+  status: 'Draft' | 'Submitted' | 'Approved' | 'Open' | 'Partially Paid' | 'Paid' | 'Overdue' | 'Rejected' | 'Void';
   subtotalPaise: number;
   taxPaise: number;
   totalPaise: number;

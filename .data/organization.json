@@ -1,0 +1,12 @@
+{
+  "id": "org-zawr-main",
+  "name": "Zawr Global Industries",
+  "legalName": "Zawr Global Industries Private Limited",
+  "gstin": "29AABCZ9999F1Z9",
+  "pan": "AABCZ9999F",
+  "currency": "INR",
+  "fyStartMonth": 4,
+  "timezone": "Asia/Kolkata",
+  "periodLockedUntil": "2026-03-31",
+  "createdAt": "2026-04-01T00:00:00.000Z"
+}

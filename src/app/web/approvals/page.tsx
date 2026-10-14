@@ -7,12 +7,13 @@ import { Button } from '@/components/common/Button';
 import { Badge } from '@/components/common/Badge';
 import { CurrencyDisplay } from '@/components/common/CurrencyDisplay';
 import { globalDataStore } from '@/lib/store/dataStore';
-import { ExpenseSubmission } from '@/types';
+import { ExpenseSubmission, VendorBill } from '@/types';
 import { formatDate } from '@/lib/utils';
-import { Check, X, RotateCcw, AlertCircle, ShieldAlert } from 'lucide-react';
+import { Check, X, RotateCcw, AlertCircle, ShieldAlert, FileText, Briefcase, CheckSquare } from 'lucide-react';
 
 export default function ApprovalsPage() {
   const [storeState, setStoreState] = useState(globalDataStore.getState());
+  const [activeTab, setActiveTab] = useState<'ALL' | 'EXPENSES' | 'BILLS'>('ALL');
   const [actionMessage, setActionMessage] = useState<{ type: 'error' | 'success'; text: string } | null>(null);
 
   useEffect(() => {
@@ -25,7 +26,13 @@ export default function ApprovalsPage() {
     (e) => e.status === 'Submitted' || e.status === 'Under Review'
   );
 
-  const handleDecision = (
+  const pendingBills = storeState.vendorBills.filter(
+    (b) => b.status === 'Submitted' || b.status === 'Draft'
+  );
+
+  const totalPending = pendingExpenses.length + pendingBills.length;
+
+  const handleExpenseDecision = (
     expense: ExpenseSubmission,
     decision: 'Approved' | 'Rejected' | 'Returned'
   ) => {
@@ -61,15 +68,38 @@ export default function ApprovalsPage() {
     }
   };
 
+  const handleBillDecision = (
+    bill: VendorBill,
+    decision: 'Approved' | 'Rejected' | 'Returned'
+  ) => {
+    const comment = window.prompt(
+      `Enter optional comment for ${decision.toLowerCase()} vendor bill "${bill.billNumber}":`,
+      decision === 'Approved' ? 'Approved for payment disbursement' : 'Requires vendor clarification'
+    );
+
+    const res = globalDataStore.reviewVendorBill(bill.id, decision, comment || undefined);
+    if (res.success) {
+      setActionMessage({
+        type: 'success',
+        text: `Vendor Bill "${bill.billNumber}" from ${bill.vendorName} has been marked as ${decision}.`,
+      });
+    } else {
+      setActionMessage({
+        type: 'error',
+        text: res.error || `Failed to process ${decision}.`,
+      });
+    }
+  };
+
   return (
     <WebLayout>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#E5E5E5] pb-4">
         <div>
-          <h1 className="text-base font-bold text-[#111111] uppercase tracking-wider">
-            Financial Approval Queue
+          <h1 className="text-base font-bold text-[#111111] uppercase tracking-wider flex items-center gap-2">
+            <CheckSquare size={16} /> Financial Approval Queue
           </h1>
           <p className="text-xs text-[#666666] mt-0.5">
-            Pending employee expenses and vendor disbursements requiring managerial authorization
+            Pending employee expense claims and vendor bills requiring managerial authorization
           </p>
         </div>
 
@@ -97,103 +127,241 @@ export default function ApprovalsPage() {
         </div>
       )}
 
-      <Card noPadding>
-        <div className="p-3 border-b border-[#E5E5E5] bg-white flex justify-between items-center text-xs">
-          <span className="font-semibold text-[#111111]">
-            {pendingExpenses.length} Submissions Awaiting Authorization
-          </span>
-          <span className="text-[#777777] text-[11px]">
-            Enforcing Separation of Duties & Tier Limits
-          </span>
-        </div>
+      {/* Tabs */}
+      <div className="flex items-center gap-2 border-b border-[#CCCCCC]">
+        <button
+          onClick={() => setActiveTab('ALL')}
+          className={`px-3 py-2 text-xs font-bold border-b-2 transition-colors cursor-pointer ${
+            activeTab === 'ALL'
+              ? 'border-black text-[#111111]'
+              : 'border-transparent text-[#666666] hover:text-black'
+          }`}
+        >
+          All Awaiting Authorization ({totalPending})
+        </button>
+        <button
+          onClick={() => setActiveTab('EXPENSES')}
+          className={`px-3 py-2 text-xs font-bold border-b-2 transition-colors cursor-pointer flex items-center gap-1.5 ${
+            activeTab === 'EXPENSES'
+              ? 'border-black text-[#111111]'
+              : 'border-transparent text-[#666666] hover:text-black'
+          }`}
+        >
+          <FileText size={13} />
+          <span>Expense Claims ({pendingExpenses.length})</span>
+        </button>
+        <button
+          onClick={() => setActiveTab('BILLS')}
+          className={`px-3 py-2 text-xs font-bold border-b-2 transition-colors cursor-pointer flex items-center gap-1.5 ${
+            activeTab === 'BILLS'
+              ? 'border-black text-[#111111]'
+              : 'border-transparent text-[#666666] hover:text-black'
+          }`}
+        >
+          <Briefcase size={13} />
+          <span>Vendor & Supplier Bills ({pendingBills.length})</span>
+        </button>
+      </div>
 
-        {pendingExpenses.length === 0 ? (
-          <div className="p-12 text-center text-xs text-[#777777]">
-            No pending submissions awaiting approval. All expenses have been processed.
+      {/* Expense Submissions Queue */}
+      {(activeTab === 'ALL' || activeTab === 'EXPENSES') && (
+        <Card noPadding>
+          <div className="p-3 border-b border-[#E5E5E5] bg-white flex justify-between items-center text-xs">
+            <span className="font-semibold text-[#111111] flex items-center gap-1.5">
+              <FileText size={14} /> Employee Expense Claims ({pendingExpenses.length})
+            </span>
+            <span className="text-[#777777] text-[11px]">
+              Enforcing Separation of Duties & Tier Limits
+            </span>
           </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left financial-table">
-              <thead>
-                <tr>
-                  <th className="p-3">Submission Date</th>
-                  <th className="p-3">Employee</th>
-                  <th className="p-3">Vendor / Merchant</th>
-                  <th className="p-3">Purpose & Details</th>
-                  <th className="p-3 text-right">Amount</th>
-                  <th className="p-3 text-center">Status</th>
-                  <th className="p-3 text-right">Approval Decision</th>
-                </tr>
-              </thead>
-              <tbody>
-                {pendingExpenses.map((exp) => {
-                  const isOwnSubmission = exp.employeeId === storeState.currentUser.id;
 
-                  return (
-                    <tr key={exp.id} className="hover:bg-[#FAFAF9]">
+          {pendingExpenses.length === 0 ? (
+            <div className="p-8 text-center text-xs text-[#777777]">
+              No pending employee expenses awaiting authorization.
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left financial-table">
+                <thead>
+                  <tr>
+                    <th className="p-3">Submission Date</th>
+                    <th className="p-3">Employee</th>
+                    <th className="p-3">Vendor / Merchant</th>
+                    <th className="p-3">Purpose & Category</th>
+                    <th className="p-3 text-right">Amount</th>
+                    <th className="p-3 text-center">Status</th>
+                    <th className="p-3 text-right">Approval Decision</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pendingExpenses.map((exp) => {
+                    const isOwnSubmission = exp.employeeId === storeState.currentUser?.id;
+
+                    return (
+                      <tr key={exp.id} className="hover:bg-[#FAFAF9]">
+                        <td className="p-3 text-xs text-[#555555]">
+                          {formatDate(exp.createdAt)}
+                        </td>
+                        <td className="p-3 text-xs font-semibold text-[#111111]">
+                          {exp.employeeName}
+                          {isOwnSubmission && (
+                            <span className="block text-[10px] text-[#C5221F] font-normal">
+                              (Your Own Submission)
+                            </span>
+                          )}
+                        </td>
+                        <td className="p-3 text-xs">
+                          <div className="font-medium text-[#111111]">{exp.vendorName}</div>
+                          <div className="text-[10px] text-[#777777] font-mono">
+                            {exp.invoiceNumber}
+                          </div>
+                          {exp.vendorGstin && (
+                            <div className="text-[9px] text-[#999999] font-mono">
+                              GSTIN: {exp.vendorGstin}
+                            </div>
+                          )}
+                        </td>
+                        <td className="p-3 text-xs text-[#444444] max-w-xs">
+                          <div className="font-medium">{exp.title}</div>
+                          <div className="text-[10px] text-[#888888] truncate">
+                            {exp.businessPurpose}
+                          </div>
+                        </td>
+                        <td className="p-3 text-right num-tabular text-xs font-bold">
+                          <CurrencyDisplay paise={exp.grandTotalPaise} />
+                        </td>
+                        <td className="p-3 text-center">
+                          <Badge status={exp.status} />
+                        </td>
+                        <td className="p-3 text-right">
+                          <div className="flex items-center justify-end gap-1.5">
+                            <Button
+                              variant="primary"
+                              size="sm"
+                              onClick={() => handleExpenseDecision(exp, 'Approved')}
+                              className="bg-[#137333] hover:bg-[#0F5C29] border-[#137333]"
+                            >
+                              <Check size={12} /> Approve
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleExpenseDecision(exp, 'Returned')}
+                            >
+                              <RotateCcw size={12} /> Return
+                            </Button>
+                            <Button
+                              variant="danger"
+                              size="sm"
+                              onClick={() => handleExpenseDecision(exp, 'Rejected')}
+                            >
+                              <X size={12} /> Reject
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </Card>
+      )}
+
+      {/* Vendor & Supplier Bills Queue */}
+      {(activeTab === 'ALL' || activeTab === 'BILLS') && (
+        <Card noPadding>
+          <div className="p-3 border-b border-[#E5E5E5] bg-white flex justify-between items-center text-xs">
+            <span className="font-semibold text-[#111111] flex items-center gap-1.5">
+              <Briefcase size={14} /> Vendor & Supplier Bills ({pendingBills.length})
+            </span>
+            <span className="text-[#777777] text-[11px]">
+              Trade Payables Authorization
+            </span>
+          </div>
+
+          {pendingBills.length === 0 ? (
+            <div className="p-8 text-center text-xs text-[#777777]">
+              No vendor bills pending payment authorization.
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left financial-table">
+                <thead>
+                  <tr>
+                    <th className="p-3">Bill Date</th>
+                    <th className="p-3">Vendor / Supplier</th>
+                    <th className="p-3">Bill #</th>
+                    <th className="p-3">Due Date</th>
+                    <th className="p-3 text-right">Taxable</th>
+                    <th className="p-3 text-right">Tax (GST)</th>
+                    <th className="p-3 text-right">Total Payable</th>
+                    <th className="p-3 text-center">Status</th>
+                    <th className="p-3 text-right">Authorization</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pendingBills.map((bill) => (
+                    <tr key={bill.id} className="hover:bg-[#FAFAF9]">
                       <td className="p-3 text-xs text-[#555555]">
-                        {formatDate(exp.createdAt)}
+                        {formatDate(bill.billDate)}
                       </td>
                       <td className="p-3 text-xs font-semibold text-[#111111]">
-                        {exp.employeeName}
-                        {isOwnSubmission && (
-                          <span className="block text-[10px] text-[#C5221F] font-normal">
-                            (Your Own Submission)
-                          </span>
-                        )}
+                        {bill.vendorName}
                       </td>
-                      <td className="p-3 text-xs">
-                        <div className="font-medium text-[#111111]">{exp.vendorName}</div>
-                        <div className="text-[10px] text-[#777777] font-mono">
-                          {exp.invoiceNumber}
-                        </div>
+                      <td className="p-3 text-xs font-mono font-medium text-[#333333]">
+                        {bill.billNumber}
                       </td>
-                      <td className="p-3 text-xs text-[#444444] max-w-xs">
-                        <div>{exp.title}</div>
-                        <div className="text-[10px] text-[#888888] truncate">
-                          {exp.businessPurpose}
-                        </div>
+                      <td className="p-3 text-xs text-[#666666]">
+                        {formatDate(bill.dueDate)}
                       </td>
-                      <td className="p-3 text-right num-tabular text-xs font-bold">
-                        <CurrencyDisplay paise={exp.grandTotalPaise} />
+                      <td className="p-3 text-right num-tabular text-xs">
+                        <CurrencyDisplay paise={bill.subtotalPaise} />
+                      </td>
+                      <td className="p-3 text-right num-tabular text-xs text-[#666666]">
+                        <CurrencyDisplay paise={bill.taxPaise} />
+                      </td>
+                      <td className="p-3 text-right num-tabular text-xs font-bold text-[#111111]">
+                        <CurrencyDisplay paise={bill.totalPaise} />
                       </td>
                       <td className="p-3 text-center">
-                        <Badge status={exp.status} />
+                        <Badge status={bill.status} />
                       </td>
                       <td className="p-3 text-right">
                         <div className="flex items-center justify-end gap-1.5">
                           <Button
                             variant="primary"
                             size="sm"
-                            onClick={() => handleDecision(exp, 'Approved')}
+                            onClick={() => handleBillDecision(bill, 'Approved')}
                             className="bg-[#137333] hover:bg-[#0F5C29] border-[#137333]"
                           >
-                            <Check size={12} /> Approve
+                            <Check size={12} /> Authorize Bill
                           </Button>
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => handleDecision(exp, 'Returned')}
+                            onClick={() => handleBillDecision(bill, 'Returned')}
                           >
                             <RotateCcw size={12} /> Return
                           </Button>
                           <Button
                             variant="danger"
                             size="sm"
-                            onClick={() => handleDecision(exp, 'Rejected')}
+                            onClick={() => handleBillDecision(bill, 'Rejected')}
                           >
                             <X size={12} /> Reject
                           </Button>
                         </div>
                       </td>
                     </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </Card>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </Card>
+      )}
     </WebLayout>
   );
 }

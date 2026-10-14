@@ -1,0 +1,29 @@
+import { Account, Organization } from '@/types';
+
+export const defaultOrganization: Organization = {
+  id: 'org-zawr-main',
+  name: 'Zawr Industries',
+  legalName: 'Zawr Industries Private Limited',
+  gstin: '29AABCZ1234F1Z5',
+  pan: 'AABCZ1234F',
+  currency: 'INR',
+  fyStartMonth: 4,
+  timezone: 'Asia/Kolkata',
+  periodLockedUntil: '2026-03-31',
+  createdAt: '2026-04-01T00:00:00.000Z',
+};
+
+export const defaultStandardAccounts: Account[] = [
+  { id: 'acc-1010', organizationId: 'org-zawr-main', code: '1010', name: 'Petty Cash', type: 'Asset', subType: 'Cash on Hand', currency: 'INR', isActive: true, balancePaise: 5000000 },
+  { id: 'acc-1020', organizationId: 'org-zawr-main', code: '1020', name: 'Main Operating Bank Account (HDFC)', type: 'Asset', subType: 'Bank Accounts', currency: 'INR', isActive: true, balancePaise: 25000000 },
+  { id: 'acc-1100', organizationId: 'org-zawr-main', code: '1100', name: 'Accounts Receivable (Trade Debtors)', type: 'Asset', subType: 'Current Assets', currency: 'INR', isActive: true, balancePaise: 0 },
+  { id: 'acc-1200', organizationId: 'org-zawr-main', code: '1200', name: 'Input CGST Tax Credit', type: 'Asset', subType: 'GST Input Credit', currency: 'INR', isActive: true, balancePaise: 0 },
+  { id: 'acc-1210', organizationId: 'org-zawr-main', code: '1210', name: 'Input SGST Tax Credit', type: 'Asset', subType: 'GST Input Credit', currency: 'INR', isActive: true, balancePaise: 0 },
+  { id: 'acc-1220', organizationId: 'org-zawr-main', code: '1220', name: 'Input IGST Tax Credit', type: 'Asset', subType: 'GST Input Credit', currency: 'INR', isActive: true, balancePaise: 0 },
+  { id: 'acc-2010', organizationId: 'org-zawr-main', code: '2010', name: 'Accounts Payable (Trade Creditors)', type: 'Liability', subType: 'Current Liabilities', currency: 'INR', isActive: true, balancePaise: 0 },
+  { id: 'acc-2100', organizationId: 'org-zawr-main', code: '2100', name: 'Output CGST Payable', type: 'Liability', subType: 'Tax Liabilities', currency: 'INR', isActive: true, balancePaise: 0 },
+  { id: 'acc-2110', organizationId: 'org-zawr-main', code: '2110', name: 'Output SGST Payable', type: 'Liability', subType: 'Tax Liabilities', currency: 'INR', isActive: true, balancePaise: 0 },
+  { id: 'acc-3010', organizationId: 'org-zawr-main', code: '3010', name: 'Shareholder Capital', type: 'Equity', subType: 'Equity Capital', currency: 'INR', isActive: true, balancePaise: 30000000 },
+  { id: 'acc-4010', organizationId: 'org-zawr-main', code: '4010', name: 'Primary Operating Revenue', type: 'Revenue', subType: 'Operating Revenue', currency: 'INR', isActive: true, balancePaise: 0 },
+  { id: 'acc-5010', organizationId: 'org-zawr-main', code: '5010', name: 'Operating & Administrative Expenses', type: 'Expense', subType: 'Operating Expense', currency: 'INR', isActive: true, balancePaise: 0 },
+];

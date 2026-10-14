@@ -22,6 +22,7 @@ import {
 } from '@/lib/accounting/engine';
 import { computeSyncHash } from '@/lib/audit/trail';
 import { evaluateExpenseApproval } from '@/lib/rbac/permissions';
+import { defaultOrganization, defaultStandardAccounts } from './defaultData';
 
 export interface DataStoreState {
   isAuthenticated: boolean;
@@ -99,10 +100,10 @@ class DataStore {
   constructor() {
     this.state = {
       isAuthenticated: false,
-      organization: null, // Zero mock data: starts empty until user configures organization
+      organization: defaultOrganization,
       users: [...defaultRecognizedUsers],
       currentUser: defaultRealAdmin,
-      accounts: [],
+      accounts: [...defaultStandardAccounts],
       journalEntries: [],
       expenses: [],
       customers: [],
@@ -188,11 +189,16 @@ class DataStore {
         this.state = {
           ...this.state,
           ...parsed,
+          organization: parsed.organization || defaultOrganization,
+          accounts: (parsed.accounts && parsed.accounts.length > 0) ? parsed.accounts : [...defaultStandardAccounts],
           users: mergedUsers,
           currentUser: activeUser,
           isAuthenticated: typeof parsed.isAuthenticated === 'boolean' ? parsed.isAuthenticated : false,
         };
         this.isLoadedFromStorage = true;
+        this.syncWithServer();
+      } else {
+        this.syncWithServer();
       }
     } catch (e) {
       console.warn('Could not load local state:', e);
@@ -217,6 +223,79 @@ class DataStore {
 
   public getLastSyncTimestamp(): number {
     return this.lastSyncTimestamp;
+  }
+
+  public async syncWithServer() {
+    if (typeof window === 'undefined') return;
+    try {
+      const res = await fetch('/api/store/sync');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && data.state) {
+          const s = data.state;
+          let changed = false;
+
+          // Reconcile expenses (union by ID)
+          const expenseMap = new Map<string, ExpenseSubmission>();
+          for (const e of s.expenses || []) {
+            if (e?.id) expenseMap.set(e.id, e);
+          }
+          for (const e of this.state.expenses || []) {
+            if (e?.id && !expenseMap.has(e.id)) {
+              expenseMap.set(e.id, e);
+            }
+          }
+          const mergedExpenses = Array.from(expenseMap.values());
+          if (mergedExpenses.length !== this.state.expenses.length) {
+            this.state.expenses = mergedExpenses;
+            changed = true;
+          }
+
+          // Reconcile vendorBills (union by ID)
+          const billMap = new Map<string, VendorBill>();
+          for (const b of s.vendorBills || []) {
+            if (b?.id) billMap.set(b.id, b);
+          }
+          for (const b of this.state.vendorBills || []) {
+            if (b?.id && !billMap.has(b.id)) {
+              billMap.set(b.id, b);
+            }
+          }
+          const mergedBills = Array.from(billMap.values());
+          if (mergedBills.length !== this.state.vendorBills.length) {
+            this.state.vendorBills = mergedBills;
+            changed = true;
+          }
+
+          if (s.organization && (!this.state.organization || s.organization.name !== this.state.organization.name)) {
+            this.state.organization = s.organization;
+            changed = true;
+          }
+
+          if (changed) {
+            this.persistLocally();
+            this.notify();
+          }
+        }
+      }
+    } catch {
+      // offline / quiet fallback
+    }
+  }
+
+  private persistLocally() {
+    this.lastSyncTimestamp = Date.now();
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(this.state));
+        this.broadcastChannel?.postMessage({
+          type: 'REALTIME_STORE_SYNC',
+          timestamp: this.lastSyncTimestamp,
+        });
+      } catch (e) {
+        console.warn('Could not persist state locally:', e);
+      }
+    }
   }
 
   public syncNow() {
@@ -279,6 +358,15 @@ class DataStore {
     );
 
     this.persist();
+
+    if (typeof window !== 'undefined') {
+      fetch('/api/organization', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(organization),
+      }).catch(() => {});
+    }
+
     return organization;
   }
 
@@ -512,6 +600,18 @@ class DataStore {
     );
 
     this.persist();
+
+    if (typeof window !== 'undefined') {
+      fetch('/api/store/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'SUBMIT_EXPENSE',
+          payload: newExpense,
+        }),
+      }).catch(() => {});
+    }
+
     return newExpense;
   }
 
@@ -558,6 +658,18 @@ class DataStore {
     );
 
     this.persist();
+
+    if (typeof window !== 'undefined') {
+      fetch('/api/store/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'REVIEW_EXPENSE',
+          payload: { id: expenseId, decision, approver: this.state.currentUser, comment },
+        }),
+      }).catch(() => {});
+    }
+
     return { success: true };
   }
 
@@ -1023,7 +1135,56 @@ class DataStore {
     });
 
     this.persist();
+
+    if (typeof window !== 'undefined') {
+      fetch('/api/store/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'ADD_VENDOR_BILL',
+          payload: newBill,
+        }),
+      }).catch(() => {});
+    }
+
     return newBill;
+  }
+
+  // Review Vendor Bill
+  public reviewVendorBill(
+    billId: string,
+    decision: 'Approved' | 'Rejected' | 'Returned',
+    comment?: string
+  ): { success: boolean; error?: string } {
+    const bill = this.state.vendorBills.find((b) => b.id === billId);
+    if (!bill) return { success: false, error: 'Vendor bill not found' };
+
+    const prevStatus = bill.status;
+    bill.status = decision === 'Approved' ? 'Approved' : decision === 'Rejected' ? 'Rejected' : 'Draft';
+
+    this.recordAuditEvent(
+      `DECIDE_VENDOR_BILL_${decision.toUpperCase()}`,
+      'VendorBill',
+      bill.id,
+      { status: prevStatus },
+      { status: bill.status, approver: this.state.currentUser.fullName },
+      comment
+    );
+
+    this.persist();
+
+    if (typeof window !== 'undefined') {
+      fetch('/api/store/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'REVIEW_VENDOR_BILL',
+          payload: { id: billId, decision, approver: this.state.currentUser, comment },
+        }),
+      }).catch(() => {});
+    }
+
+    return { success: true };
   }
 
   // Add Bank Statement Line

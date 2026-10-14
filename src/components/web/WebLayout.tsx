@@ -64,10 +64,10 @@ export const WebLayout: React.FC<{ children: React.ReactNode }> = ({ children })
     };
   }, [isMobileMenuOpen]);
 
-  // Compute pending approvals count
-  const pendingApprovalsCount = store.expenses.filter(
-    (e) => e.status === 'Submitted' || e.status === 'Under Review'
-  ).length;
+  // Compute pending approvals count (both expenses and vendor bills)
+  const pendingApprovalsCount =
+    (store.expenses?.filter((e) => e.status === 'Submitted' || e.status === 'Under Review').length || 0) +
+    (store.vendorBills?.filter((b) => b.status === 'Submitted' || b.status === 'Draft').length || 0);
 
   const navItems: NavItem[] = [
     { name: 'Overview', href: '/web', icon: LayoutDashboard },

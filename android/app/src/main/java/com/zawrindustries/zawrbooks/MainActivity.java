@@ -39,6 +39,10 @@ public class MainActivity extends Activity {
 
         configureWebView();
 
+        if (checkSelfPermission(android.Manifest.permission.CAMERA) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(new String[]{android.Manifest.permission.CAMERA}, 1002);
+        }
+
         String configuredUrl = mPrefs.getString(KEY_SERVER_URL, DEFAULT_URL);
         mWebView.loadUrl(configuredUrl);
     }
@@ -205,6 +209,11 @@ public class MainActivity extends Activity {
                     activity.mProgressBar.setVisibility(View.GONE);
                 }
             }
+        }
+
+        @Override
+        public void onPermissionRequest(final android.webkit.PermissionRequest request) {
+            request.grant(request.getResources());
         }
 
         @Override

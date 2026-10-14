@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Modal } from '@/components/common/Modal';
 import { Button } from '@/components/common/Button';
 import { Badge } from '@/components/common/Badge';
@@ -23,6 +23,11 @@ import {
   RefreshCw,
   Eye,
   FileCheck2,
+  SwitchCamera,
+  Zap,
+  ZapOff,
+  ImageIcon,
+  AlertTriangle,
 } from 'lucide-react';
 import Tesseract from 'tesseract.js';
 
@@ -51,6 +56,20 @@ export const ReceiptScannerModal: React.FC<ReceiptScannerModalProps> = ({
   const [rawOcrText, setRawOcrText] = useState<string>('');
   const [isDragOver, setIsDragOver] = useState<boolean>(false);
 
+  // Camera & Viewfinder state
+  const [isCameraActive, setIsCameraActive] = useState<boolean>(false);
+  const [isCameraStarting, setIsCameraStarting] = useState<boolean>(false);
+  const [cameraError, setCameraError] = useState<string | null>(null);
+  const [facingMode, setFacingMode] = useState<'environment' | 'user'>('environment');
+  const [hasTorch, setHasTorch] = useState<boolean>(false);
+  const [isTorchOn, setIsTorchOn] = useState<boolean>(false);
+
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+
   // Extracted and editable fields
   const [merchantName, setMerchantName] = useState('');
   const [vendorGstin, setVendorGstin] = useState('');
@@ -69,10 +88,136 @@ export const ReceiptScannerModal: React.FC<ReceiptScannerModalProps> = ({
   const [duplicateWarning, setDuplicateWarning] = useState<string | null>(null);
   const [confidencePercent, setConfidencePercent] = useState<number>(95);
 
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const stopCamera = useCallback(() => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => {
+        try {
+          track.stop();
+        } catch (e) {
+          console.warn('Track stop error', e);
+        }
+      });
+      streamRef.current = null;
+    }
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+    setIsCameraActive(false);
+    setIsTorchOn(false);
+  }, []);
+
+  const startCamera = useCallback(async (mode: 'environment' | 'user' = facingMode) => {
+    stopCamera();
+    setIsCameraStarting(true);
+    setCameraError(null);
+
+    if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) {
+      setCameraError('Live camera is not supported in this browser environment. You can upload an image from your gallery or choose a file below.');
+      setIsCameraStarting(false);
+      return;
+    }
+
+    try {
+      const constraints: MediaStreamConstraints = {
+        video: {
+          facingMode: { ideal: mode },
+          width: { ideal: 1920 },
+          height: { ideal: 1080 },
+        },
+        audio: false,
+      };
+
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      streamRef.current = stream;
+
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play().catch(() => {});
+      }
+
+      // Check if torch is supported
+      const track = stream.getVideoTracks()[0];
+      if (track) {
+        const caps = (track.getCapabilities ? track.getCapabilities() : {}) as any;
+        setHasTorch(Boolean(caps && 'torch' in caps));
+      }
+
+      setIsCameraActive(true);
+    } catch (err: any) {
+      console.warn('Camera access error:', err);
+      let msg = 'Unable to access camera. Please allow camera permissions or upload from gallery below.';
+      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+        msg = 'Camera permission was denied. Please grant camera permission in your settings, or upload a photo from your gallery below.';
+      } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+        msg = 'No camera device found on this system. Please upload a receipt from your gallery or files below.';
+      } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
+        msg = 'Camera is currently busy or in use by another app. Please close other camera apps and retry, or choose from gallery.';
+      }
+      setCameraError(msg);
+      setIsCameraActive(false);
+    } finally {
+      setIsCameraStarting(false);
+    }
+  }, [facingMode, stopCamera]);
+
+  const toggleTorch = async () => {
+    const track = streamRef.current?.getVideoTracks()[0];
+    if (!track) return;
+    try {
+      const nextTorch = !isTorchOn;
+      await (track as any).applyConstraints({
+        advanced: [{ torch: nextTorch }],
+      });
+      setIsTorchOn(nextTorch);
+    } catch (err) {
+      console.warn('Torch toggle failed:', err);
+    }
+  };
+
+  const switchCamera = () => {
+    const nextMode = facingMode === 'environment' ? 'user' : 'environment';
+    setFacingMode(nextMode);
+    startCamera(nextMode);
+  };
+
+  const capturePhoto = () => {
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    if (!video || !canvas) return;
+
+    const width = video.videoWidth || 1280;
+    const height = video.videoHeight || 720;
+    canvas.width = width;
+    canvas.height = height;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    ctx.drawImage(video, 0, 0, width, height);
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
+
+    stopCamera();
+    setSelectedImageDataUrl(dataUrl);
+    const timestamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
+    const name = `camera-scan-${timestamp}.jpg`;
+    setFileName(name);
+    runOcr(dataUrl, name);
+  };
+
+  // Automatically start camera when modal opens at Step 1
+  useEffect(() => {
+    if (isOpen && step === 1) {
+      startCamera();
+    } else {
+      stopCamera();
+    }
+    return () => {
+      stopCamera();
+    };
+  }, [isOpen, step, startCamera, stopCamera]);
 
   const resetState = () => {
+    stopCamera();
     setStep(1);
     setSelectedImageDataUrl(null);
     setFileName('');
@@ -82,10 +227,12 @@ export const ReceiptScannerModal: React.FC<ReceiptScannerModalProps> = ({
     setDuplicateWarning(null);
     setRawOcrText('');
     setShowRawText(false);
+    setCameraError(null);
   };
 
   const processFile = (file: File) => {
     if (!file) return;
+    stopCamera();
     setFileName(file.name);
     setRotation(0);
     setZoomLevel(1);
@@ -248,73 +395,206 @@ export const ReceiptScannerModal: React.FC<ReceiptScannerModalProps> = ({
       subtitle="Optical text extraction with Indian GST verification and ledger reconciliation"
       maxWidth="4xl"
     >
-      {/* Step 1: Capture or Upload with Drag & Drop */}
+      {/* Hidden Canvas for High-Resolution Camera Capture */}
+      <canvas ref={canvasRef} className="hidden" />
+
+      {/* Hidden File Inputs for Gallery Upload & Fallback Native Camera */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*,application/pdf"
+        className="hidden"
+        onChange={handleFileUpload}
+      />
+      <input
+        ref={cameraInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        className="hidden"
+        onChange={handleFileUpload}
+      />
+
+      {/* Step 1: Live Camera Viewfinder with Option Below to Upload from Gallery */}
       {step === 1 && (
-        <div className="space-y-4">
-          <div
-            onDragOver={(e) => {
-              e.preventDefault();
-              setIsDragOver(true);
-            }}
-            onDragLeave={() => setIsDragOver(false)}
-            onDrop={handleDrop}
-            className={`border-2 border-dashed p-8 text-center transition-all ${
-              isDragOver
-                ? 'border-black bg-[#EBF3EB]'
-                : 'border-[#CCCCCC] bg-[#FAFAF9] hover:border-black'
-            }`}
-          >
-            <div className="flex justify-center mb-3 text-[#555555]">
-              <ScanLine size={44} className="stroke-1 text-[#111111]" />
-            </div>
-            <h4 className="text-sm font-semibold uppercase tracking-wider text-[#111111]">
-              Capture or Upload Bill / Receipt
-            </h4>
-            <p className="text-xs text-[#666666] mt-1 max-w-md mx-auto">
-              Drop your receipt, restaurant bill, petrol voucher, or tax invoice here. We extract vendor, GSTIN, dates, and amounts automatically.
-            </p>
+        <div
+          onDragOver={(e) => {
+            e.preventDefault();
+            setIsDragOver(true);
+          }}
+          onDragLeave={() => setIsDragOver(false)}
+          onDrop={handleDrop}
+          className="max-w-xl mx-auto space-y-3"
+        >
+          {/* Camera Viewfinder Box */}
+          <div className="bg-[#111111] border border-black relative overflow-hidden shadow-md">
+            {/* Camera Toolbar / Status */}
+            <div className="flex items-center justify-between px-3 py-2 bg-black/80 border-b border-white/10 text-white z-20 relative">
+              <div className="flex items-center gap-2">
+                <span className="relative flex h-2 w-2">
+                  <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${isCameraActive ? 'bg-emerald-400' : 'bg-amber-400'}`}></span>
+                  <span className={`relative inline-flex rounded-full h-2 w-2 ${isCameraActive ? 'bg-emerald-500' : 'bg-amber-500'}`}></span>
+                </span>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-gray-200">
+                  {isCameraActive ? 'Live Camera Scanner' : isCameraStarting ? 'Connecting Camera...' : 'Camera Viewfinder'}
+                </span>
+              </div>
 
-            <div className="mt-6 flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-3">
-              <label className="cursor-pointer">
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*,application/pdf"
-                  className="hidden"
-                  onChange={handleFileUpload}
-                />
-                <Button
-                  variant="primary"
-                  size="md"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="w-full justify-center"
+              <div className="flex items-center gap-1">
+                {hasTorch && (
+                  <button
+                    type="button"
+                    onClick={toggleTorch}
+                    className={`p-1.5 rounded-none text-xs transition-colors ${
+                      isTorchOn ? 'bg-amber-400 text-black' : 'text-gray-300 hover:text-white hover:bg-white/10'
+                    }`}
+                    title={isTorchOn ? 'Turn Flashlight Off' : 'Turn Flashlight On'}
+                  >
+                    {isTorchOn ? <Zap size={14} /> : <ZapOff size={14} />}
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={switchCamera}
+                  disabled={isCameraStarting}
+                  className="p-1.5 text-gray-300 hover:text-white hover:bg-white/10 rounded-none text-xs transition-colors"
+                  title="Switch Front / Rear Camera"
                 >
-                  <Upload size={15} /> Upload Receipt File
-                </Button>
-              </label>
-
-              <label className="cursor-pointer">
-                <input
-                  ref={cameraInputRef}
-                  type="file"
-                  accept="image/*"
-                  capture="environment"
-                  className="hidden"
-                  onChange={handleFileUpload}
-                />
-                <Button
-                  variant="outline"
-                  size="md"
-                  onClick={() => cameraInputRef.current?.click()}
-                  className="w-full justify-center"
+                  <SwitchCamera size={14} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => startCamera()}
+                  disabled={isCameraStarting}
+                  className="p-1.5 text-gray-300 hover:text-white hover:bg-white/10 rounded-none text-xs transition-colors"
+                  title="Restart Camera"
                 >
-                  <Camera size={15} /> Camera Photo
-                </Button>
-              </label>
+                  <RefreshCw size={14} className={isCameraStarting ? 'animate-spin' : ''} />
+                </button>
+              </div>
             </div>
 
-            <div className="mt-4 text-[11px] text-[#888888]">
-              Supports JPG, PNG, WEBP, and PDF documents up to 25MB
+            {/* Video Viewport Area */}
+            <div className="relative w-full h-[320px] sm:h-[390px] bg-black flex items-center justify-center overflow-hidden">
+              {/* The Live Video Element */}
+              <video
+                ref={videoRef}
+                autoPlay
+                playsInline
+                muted
+                className={`w-full h-full object-cover transition-opacity duration-300 ${
+                  isCameraActive ? 'opacity-100' : 'opacity-0'
+                }`}
+              />
+
+              {/* Viewfinder Target Framing Brackets */}
+              {isCameraActive && (
+                <div className="absolute inset-4 sm:inset-6 pointer-events-none z-10 flex flex-col justify-between">
+                  <div className="flex justify-between items-start">
+                    <div className="w-8 h-8 border-t-2 border-l-2 border-white drop-shadow"></div>
+                    <div className="w-8 h-8 border-t-2 border-r-2 border-white drop-shadow"></div>
+                  </div>
+
+                  {/* Center Guidance Prompt */}
+                  <div className="text-center my-auto">
+                    <div className="inline-block px-3 py-1 bg-black/60 backdrop-blur-xs border border-white/20 text-white text-[10px] font-mono tracking-widest uppercase">
+                      Position Receipt Inside Frame
+                    </div>
+                  </div>
+
+                  <div className="flex justify-between items-end">
+                    <div className="w-8 h-8 border-b-2 border-l-2 border-white drop-shadow"></div>
+                    <div className="w-8 h-8 border-b-2 border-r-2 border-white drop-shadow"></div>
+                  </div>
+                </div>
+              )}
+
+              {/* Loading / Starting Camera State */}
+              {isCameraStarting && (
+                <div className="absolute inset-0 bg-black/90 flex flex-col items-center justify-center text-white gap-2.5 z-20">
+                  <div className="w-8 h-8 border-2 border-white border-t-transparent animate-spin rounded-full"></div>
+                  <span className="text-xs font-semibold tracking-wider uppercase text-gray-200">
+                    Opening Camera...
+                  </span>
+                </div>
+              )}
+
+              {/* Camera Error / Permission Fallback View */}
+              {cameraError && !isCameraStarting && (
+                <div className="absolute inset-0 bg-[#FAFAF9] p-6 flex flex-col items-center justify-center text-center space-y-3 z-20">
+                  <div className="p-3 bg-amber-50 border border-amber-200 rounded-full text-amber-700">
+                    <AlertTriangle size={28} />
+                  </div>
+                  <div>
+                    <h5 className="text-xs font-bold uppercase tracking-wider text-[#111111]">
+                      Camera Access Needed
+                    </h5>
+                    <p className="text-xs text-[#666666] mt-1 max-w-sm mx-auto">
+                      {cameraError}
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap gap-2 justify-center pt-1">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => startCamera()}
+                    >
+                      <RefreshCw size={13} /> Try Again
+                    </Button>
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      onClick={() => cameraInputRef.current?.click()}
+                    >
+                      <Camera size={13} /> Open Camera App
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {/* Shutter Capture Button */}
+              {isCameraActive && (
+                <div className="absolute bottom-3.5 inset-x-0 flex items-center justify-center z-30">
+                  <button
+                    type="button"
+                    onClick={capturePhoto}
+                    className="group flex items-center gap-2.5 px-6 py-2.5 bg-white text-black hover:bg-[#F4F3EF] active:scale-95 transition-all shadow-xl font-bold text-xs uppercase tracking-wider border border-white cursor-pointer"
+                  >
+                    <span className="relative flex h-3 w-3">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-600"></span>
+                    </span>
+                    <Camera size={16} className="text-black" />
+                    <span>Capture Receipt</span>
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Option Below to Upload from Gallery / Photos */}
+          <div className="space-y-2 pt-1">
+            <div className="relative flex py-1 items-center">
+              <div className="flex-grow border-t border-[#E5E5E5]"></div>
+              <span className="flex-shrink mx-3 text-[10px] font-bold tracking-widest uppercase text-[#888888]">
+                Or Upload Existing Receipt
+              </span>
+              <div className="flex-grow border-t border-[#E5E5E5]"></div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="w-full py-3.5 px-4 bg-white hover:bg-[#F4F3EF] border-2 border-dashed border-[#CCCCCC] hover:border-black transition-all flex items-center justify-center gap-2.5 text-xs font-bold uppercase tracking-wider text-[#111111] shadow-2xs group cursor-pointer"
+            >
+              <ImageIcon size={18} className="text-[#555555] group-hover:text-black transition-colors" />
+              <span>Upload from Gallery / Photos</span>
+            </button>
+
+            <div className="text-[11px] text-center text-[#888888] flex items-center justify-center gap-2">
+              <span>Supports JPG, PNG, WEBP, and PDF invoices</span>
+              <span>&bull;</span>
+              <span>Drag & drop supported</span>
             </div>
           </div>
         </div>

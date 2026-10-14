@@ -13,45 +13,69 @@ interface AuthGuardProps {
 export const AuthGuard: React.FC<AuthGuardProps> = ({ children, allowedRoles }) => {
   const router = useRouter();
   const pathname = usePathname();
-  const [isReady, setIsReady] = useState(false);
-  const [storeState, setStoreState] = useState(globalDataStore.getState());
+  const [isVerifying, setIsVerifying] = useState(true);
+  const [isAuthorized, setIsAuthorized] = useState(false);
 
   useEffect(() => {
-    // Check initial state
-    const current = globalDataStore.getState();
-    setStoreState(current);
+    let isMounted = true;
 
-    if (!current.isAuthenticated) {
-      router.replace('/login');
-      return;
-    }
+    async function checkSession() {
+      try {
+        const res = await fetch('/api/auth/me');
+        const data = await res.json();
 
-    if (allowedRoles && !allowedRoles.includes(current.currentUser.role)) {
-      // Role not allowed for this route
-      if (pathname.startsWith('/control')) {
-        router.replace('/web');
-        return;
+        if (!isMounted) return;
+
+        if (data.authenticated && data.user) {
+          // Sync with local data store
+          globalDataStore.login(data.user);
+
+          // Role check
+          if (allowedRoles && !allowedRoles.includes(data.user.role)) {
+            router.replace('/web?error=unauthorized');
+            return;
+          }
+
+          setIsAuthorized(true);
+        } else {
+          globalDataStore.logout();
+          const target = pathname !== '/' ? `/login?from=${encodeURIComponent(pathname)}` : '/login';
+          router.replace(target);
+        }
+      } catch {
+        if (!isMounted) return;
+        // Fallback to store if offline/failed
+        const current = globalDataStore.getState();
+        if (current.isAuthenticated) {
+          setIsAuthorized(true);
+        } else {
+          router.replace('/login');
+        }
+      } finally {
+        if (isMounted) setIsVerifying(false);
       }
     }
 
-    setIsReady(true);
+    checkSession();
 
     const unsubscribe = globalDataStore.subscribe(() => {
       const updated = globalDataStore.getState();
-      setStoreState(updated);
       if (!updated.isAuthenticated) {
         router.replace('/login');
       }
     });
 
-    return unsubscribe;
+    return () => {
+      isMounted = false;
+      unsubscribe();
+    };
   }, [router, pathname, allowedRoles]);
 
-  if (!isReady || !storeState.isAuthenticated) {
+  if (isVerifying || !isAuthorized) {
     return (
       <div className="min-h-screen bg-[#F4F3EF] flex flex-col items-center justify-center font-sans">
-        <div className="w-8 h-8 border-2 border-black border-t-transparent animate-spin rounded-full mb-3"></div>
-        <p className="text-xs uppercase font-mono tracking-widest text-[#666666]">
+        <div className="w-7 h-7 border-2 border-black border-t-transparent animate-spin rounded-full mb-3"></div>
+        <p className="text-[11px] uppercase font-mono tracking-widest text-[#666666]">
           Verifying Authenticated Session...
         </p>
       </div>

@@ -58,14 +58,30 @@ describe('Authentication & RBAC Layer', () => {
   });
 
   describe('RBAC Session & Login', () => {
+    it('should maintain strictly the 3 organization accounts with Syed Ismail Zabiulla as Super Admin Owner', () => {
+      expect(defaultRecognizedUsers).toHaveLength(3);
+      expect(defaultRecognizedUsers[0].email).toBe('ceo@zawrindustries.com');
+      expect(defaultRecognizedUsers[0].fullName).toBe('Syed Ismail Zabiulla');
+      expect(defaultRecognizedUsers[0].role).toBe('owner');
+
+      expect(defaultRecognizedUsers[1].email).toBe('md@zawrindustries.com');
+      expect(defaultRecognizedUsers[1].fullName).toBe('Mohammed Ahmed');
+      expect(defaultRecognizedUsers[1].role).toBe('director');
+
+      expect(defaultRecognizedUsers[2].email).toBe('accounts@zawrindustries.com');
+      expect(defaultRecognizedUsers[2].fullName).toBe('Zawr Finance Accounts');
+      expect(defaultRecognizedUsers[2].role).toBe('finance_admin');
+    });
+
     it('should login recognized user and mark store as authenticated', () => {
-      const admin = defaultRecognizedUsers[0];
+      const superAdmin = defaultRecognizedUsers[0];
       expect(globalDataStore.getState().isAuthenticated).toBe(false);
 
-      globalDataStore.login(admin);
+      globalDataStore.login(superAdmin);
       const state = globalDataStore.getState();
       expect(state.isAuthenticated).toBe(true);
-      expect(state.currentUser.email).toBe(admin.email);
+      expect(state.currentUser.email).toBe('ceo@zawrindustries.com');
+      expect(state.currentUser.fullName).toBe('Syed Ismail Zabiulla');
       expect(state.currentUser.role).toBe('owner');
     });
 
@@ -80,6 +96,40 @@ describe('Authentication & RBAC Layer', () => {
 
       expect(loginEvent).toBeDefined();
       expect(logoutEvent).toBeDefined();
+    });
+  });
+
+  describe('Cryptographic Session Tokens', () => {
+    it('should generate and verify HMAC-SHA256 session token', async () => {
+      const { createSessionToken, verifySessionToken } = await import('@/lib/auth/session');
+      const token = await createSessionToken({
+        userId: 'usr-123',
+        email: 'ceo@zawrindustries.com',
+        fullName: 'Syed Ismail',
+        role: 'owner',
+      });
+
+      expect(token).toBeDefined();
+      expect(token).toContain('.');
+
+      const verified = await verifySessionToken(token);
+      expect(verified).not.toBeNull();
+      expect(verified?.email).toBe('ceo@zawrindustries.com');
+      expect(verified?.role).toBe('owner');
+    });
+
+    it('should reject tampered or corrupted tokens', async () => {
+      const { createSessionToken, verifySessionToken } = await import('@/lib/auth/session');
+      const token = await createSessionToken({
+        userId: 'usr-123',
+        email: 'ceo@zawrindustries.com',
+        fullName: 'Syed Ismail',
+        role: 'owner',
+      });
+
+      const tampered = token.slice(0, -4) + 'abcd';
+      const result = await verifySessionToken(tampered);
+      expect(result).toBeNull();
     });
   });
 });

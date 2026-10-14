@@ -1,9 +1,8 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { globalDataStore, defaultRecognizedUsers } from '@/lib/store/dataStore';
-import { hashPassword } from '@/lib/auth/crypto';
+import React, { useState, useEffect, useRef } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { globalDataStore } from '@/lib/store/dataStore';
 import { BrandLogo } from '@/components/common/BrandLogo';
 import { Button } from '@/components/common/Button';
 import { SetPasswordModal } from '@/components/auth/SetPasswordModal';
@@ -11,41 +10,47 @@ import {
   Mail,
   Lock,
   ArrowRight,
-  ShieldCheck,
   CheckCircle2,
   AlertCircle,
-  KeyRound,
+  Eye,
+  EyeOff,
   RefreshCw,
-  Sparkles,
+  KeyRound,
+  ShieldCheck,
 } from 'lucide-react';
+
+type AuthMode = 'password' | 'otp';
 
 export default function LoginPage() {
   const router = useRouter();
-  const [storeState, setStoreState] = useState(globalDataStore.getState());
-  const [activeTab, setActiveTab] = useState<'otp' | 'password'>('otp');
+  const searchParams = useSearchParams();
+  const returnUrl = searchParams.get('from') || '/web';
 
-  // Form states
+  const [authMode, setAuthMode] = useState<AuthMode>('password');
+
+  // Form Fields
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [otpCode, setOtpCode] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+
+  // OTP State
   const [otpSent, setOtpSent] = useState(false);
+  const [otpCode, setOtpCode] = useState(['', '', '', '', '', '']);
   const [otpTimer, setOtpTimer] = useState(0);
+
+  // Status & Feedback
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [infoNotice, setInfoNotice] = useState<string | null>(null);
+  const [noPasswordPrompt, setNoPasswordPrompt] = useState(false);
 
-  // Post-OTP Password Prompt Modal
+  // Post-OTP Password Setup
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
-  const [authenticatedUserEmail, setAuthenticatedUserEmail] = useState<string | null>(null);
+  const [verifiedEmail, setVerifiedEmail] = useState<string | null>(null);
 
-  useEffect(() => {
-    setStoreState(globalDataStore.getState());
-    return globalDataStore.subscribe(() => {
-      setStoreState(globalDataStore.getState());
-    });
-  }, []);
+  const otpInputsRef = useRef<(HTMLInputElement | null)[]>([]);
 
-  // Timer countdown for OTP expiry
+  // Timer countdown
   useEffect(() => {
     if (otpTimer <= 0) return;
     const interval = setInterval(() => {
@@ -60,15 +65,61 @@ export default function LoginPage() {
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  // Dispatch OTP
-  const handleSendOtp = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
+  // 1. Password Login
+  const handlePasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     setError(null);
-    setSuccessMessage(null);
+    setInfoNotice(null);
+    setNoPasswordPrompt(false);
 
     const targetEmail = email.trim().toLowerCase();
+    if (!targetEmail || !password) {
+      setError('Please enter both your work email and password.');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: targetEmail, password }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        if (data.code === 'NO_PASSWORD_SET') {
+          setNoPasswordPrompt(true);
+          setError(data.message);
+        } else {
+          setError(data.message || 'Invalid email or password.');
+        }
+        setLoading(false);
+        return;
+      }
+
+      // Sync local state and redirect
+      if (data.user) {
+        globalDataStore.login(data.user);
+      }
+      router.replace(returnUrl);
+    } catch {
+      setError('Network connection error. Please verify your internet and try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 2. Request OTP Code
+  const handleSendOtp = async (customEmail?: string) => {
+    setError(null);
+    setInfoNotice(null);
+    setNoPasswordPrompt(false);
+
+    const targetEmail = (customEmail || email).trim().toLowerCase();
     if (!targetEmail || !targetEmail.includes('@')) {
-      setError('Please provide a valid business or personal email address.');
+      setError('Please provide a valid work email address.');
       return;
     }
 
@@ -82,30 +133,68 @@ export default function LoginPage() {
 
       const data = await res.json();
       if (!res.ok || !data.success) {
-        setError(data.error || 'Failed to dispatch verification email. Please try again.');
+        setError(data.error || data.message || 'Failed to dispatch verification code. Please try again.');
       } else {
+        setAuthMode('otp');
         setOtpSent(true);
         setOtpTimer(600); // 10 minutes
-        setSuccessMessage(`A 6-digit verification code has been dispatched to ${targetEmail}`);
+        setOtpCode(['', '', '', '', '', '']);
+        setInfoNotice(`A 6-digit verification code has been dispatched to ${targetEmail}`);
+        setTimeout(() => {
+          otpInputsRef.current[0]?.focus();
+        }, 100);
       }
     } catch {
-      setError('Network error: Unable to reach authentication service.');
+      setError('Network error: Unable to contact authentication server.');
     } finally {
       setLoading(false);
     }
   };
 
-  // Verify OTP & Authenticate
+  // 3. OTP Code Input Handling (6 digits with auto-focus)
+  const handleOtpDigitChange = (index: number, value: string) => {
+    if (value.length > 1) {
+      // Handle paste of full 6-digit code
+      const pasted = value.replace(/\D/g, '').slice(0, 6);
+      if (pasted.length > 0) {
+        const nextDigits = [...otpCode];
+        for (let i = 0; i < 6; i++) {
+          nextDigits[i] = pasted[i] || '';
+        }
+        setOtpCode(nextDigits);
+        const focusIndex = Math.min(pasted.length, 5);
+        otpInputsRef.current[focusIndex]?.focus();
+      }
+      return;
+    }
+
+    const cleanChar = value.replace(/\D/g, '');
+    const next = [...otpCode];
+    next[index] = cleanChar;
+    setOtpCode(next);
+
+    if (cleanChar && index < 5) {
+      otpInputsRef.current[index + 1]?.focus();
+    }
+  };
+
+  const handleOtpKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Backspace' && !otpCode[index] && index > 0) {
+      otpInputsRef.current[index - 1]?.focus();
+    }
+  };
+
+  // 4. Verify OTP Code
   const handleVerifyOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    setSuccessMessage(null);
+    setInfoNotice(null);
 
     const targetEmail = email.trim().toLowerCase();
-    const code = otpCode.trim();
+    const fullCode = otpCode.join('');
 
-    if (!code || code.length !== 6) {
-      setError('Please enter the 6-digit verification code sent to your email.');
+    if (fullCode.length !== 6) {
+      setError('Please enter the complete 6-digit verification code.');
       return;
     }
 
@@ -114,28 +203,26 @@ export default function LoginPage() {
       const res = await fetch('/api/auth/verify-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: targetEmail, code }),
+        body: JSON.stringify({ email: targetEmail, code: fullCode }),
       });
 
       const data = await res.json();
       if (!res.ok || !data.success) {
-        setError(data.error || 'Invalid or expired verification code.');
+        setError(data.message || 'Invalid or expired verification code.');
         setLoading(false);
         return;
       }
 
-      // Provision or get user in store
-      const user = globalDataStore.findOrCreateUser(targetEmail);
-      globalDataStore.login(user);
+      if (data.user) {
+        globalDataStore.login(data.user);
+      }
 
-      setAuthenticatedUserEmail(user.email);
-
-      // If user doesn't have a password yet, offer to set one or continue directly
-      if (!user.passwordHash) {
-        setSuccessMessage('Verification confirmed! You can now set a password or proceed directly.');
+      // If user hasn't set up a password yet, offer password setup
+      if (!data.hasPassword) {
+        setVerifiedEmail(targetEmail);
         setIsPasswordModalOpen(true);
       } else {
-        redirectToAppropriateSurface(user.role);
+        router.replace(returnUrl);
       }
     } catch {
       setError('An error occurred during verification.');
@@ -144,174 +231,190 @@ export default function LoginPage() {
     }
   };
 
-  // Password Sign-In
-  const handlePasswordLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-    setSuccessMessage(null);
-
-    const targetEmail = email.trim().toLowerCase();
-    if (!targetEmail || !password) {
-      setError('Please provide both email and password.');
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const user = globalDataStore.findUserByEmail(targetEmail);
-
-      if (!user) {
-        setError(
-          'No account found with this email. Please sign in with "Email OTP" to register or verify.'
-        );
-        setLoading(false);
-        return;
-      }
-
-      if (!user.passwordHash) {
-        setError(
-          'No password has been established for this account yet. Please switch to "Email OTP" to sign in and set your password.'
-        );
-        setLoading(false);
-        return;
-      }
-
-      const inputHash = await hashPassword(password);
-      if (inputHash !== user.passwordHash) {
-        setError('Incorrect password. You can also sign in instantly using Email OTP.');
-        setLoading(false);
-        return;
-      }
-
-      // Authenticate
-      globalDataStore.login(user);
-      redirectToAppropriateSurface(user.role);
-    } catch {
-      setError('Authentication failed. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const redirectToAppropriateSurface = (role: string) => {
-    if (role === 'employee') {
-      router.push('/mobile');
-    } else {
-      router.push('/web');
-    }
-  };
-
-  const handleSelectPreSeeded = (testEmail: string) => {
-    setEmail(testEmail);
-    setOtpSent(false);
-    setOtpCode('');
-    setError(null);
-    setSuccessMessage(null);
-  };
-
   return (
-    <div className="min-h-screen bg-[#F4F3EF] flex flex-col justify-between items-center py-10 px-4 font-sans select-none">
-      {/* Top Branding Bar */}
-      <div className="w-full max-w-md flex flex-col items-center mb-6">
+    <div className="min-h-screen bg-[#F7F7F6] flex flex-col justify-between items-center py-12 px-4 font-sans select-none">
+      {/* Top Brand Header */}
+      <div className="w-full max-w-sm flex flex-col items-center mb-6">
         <BrandLogo variant="reactive" className="h-8 md:h-9 mb-2" />
-        <span className="text-[11px] uppercase tracking-widest text-[#777777] font-semibold">
-          Financial Management & Enterprise Control
+        <span className="text-[11px] uppercase tracking-wider text-[#777777] font-semibold">
+          Financial Management & Control
         </span>
       </div>
 
       {/* Main Authentication Card */}
-      <div className="w-full max-w-md bg-white border border-[#111111] shadow-xl p-6 md:p-8">
-        <div className="border-b border-[#E5E5E5] pb-4 mb-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-base font-bold text-[#111111] uppercase tracking-wide">
-                Sign In
-              </h1>
-              <p className="text-xs text-[#666666] mt-0.5">
-                Two-Factor Authenticated Access Control
-              </p>
-            </div>
-            <div className="flex items-center gap-1.5 px-2 py-1 bg-[#F4F3EF] border border-[#E5E5E5] text-[10px] text-[#555555] font-mono">
-              <ShieldCheck size={12} className="text-[#111111]" />
-              <span>TLS 256-BIT</span>
-            </div>
-          </div>
-
-          {/* Tab Switcher */}
-          <div className="grid grid-cols-2 gap-1 mt-5 bg-[#F4F3EF] p-1 border border-[#E5E5E5]">
-            <button
-              type="button"
-              onClick={() => {
-                setActiveTab('otp');
-                setError(null);
-              }}
-              className={`py-1.5 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors ${
-                activeTab === 'otp'
-                  ? 'bg-white text-[#111111] shadow-xs border border-[#E5E5E5]'
-                  : 'text-[#666666] hover:text-[#111111]'
-              }`}
-            >
-              <Mail size={13} />
-              <span>Email OTP</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setActiveTab('password');
-                setError(null);
-              }}
-              className={`py-1.5 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors ${
-                activeTab === 'password'
-                  ? 'bg-white text-[#111111] shadow-xs border border-[#E5E5E5]'
-                  : 'text-[#666666] hover:text-[#111111]'
-              }`}
-            >
-              <Lock size={13} />
-              <span>Password</span>
-            </button>
-          </div>
+      <div className="w-full max-w-md bg-white border border-[#E0E0DF] shadow-md p-7 md:p-9">
+        {/* Header Title */}
+        <div className="mb-6">
+          <h1 className="text-lg font-bold text-[#111111] tracking-tight">
+            {authMode === 'password'
+              ? 'Sign in to your account'
+              : otpSent
+              ? 'Enter verification code'
+              : 'Passwordless Sign-In'}
+          </h1>
+          <p className="text-xs text-[#666666] mt-1">
+            {authMode === 'password'
+              ? 'Enter your work email and password to access the portal'
+              : otpSent
+              ? `A 6-digit code was sent to ${email}`
+              : 'Sign in with a single-use code sent to your email'}
+          </p>
         </div>
 
-        {/* Feedback alerts */}
+        {/* Error Feedback */}
         {error && (
-          <div className="mb-4 p-3 bg-red-50 border border-red-200 text-xs text-red-700 flex items-start gap-2">
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 text-xs text-red-700 flex items-start gap-2.5">
             <AlertCircle size={15} className="shrink-0 mt-0.5 text-red-600" />
-            <span>{error}</span>
+            <div className="flex-1">
+              <span>{error}</span>
+              {noPasswordPrompt && (
+                <div className="mt-2 pt-2 border-t border-red-200">
+                  <button
+                    type="button"
+                    onClick={() => handleSendOtp(email)}
+                    className="text-xs font-semibold text-black hover:underline flex items-center gap-1"
+                  >
+                    Send One-Time Code to {email} <ArrowRight size={12} />
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         )}
 
-        {successMessage && (
-          <div className="mb-4 p-3 bg-emerald-50 border border-emerald-200 text-xs text-emerald-800 flex items-start gap-2">
+        {/* Success / Notice Feedback */}
+        {infoNotice && (
+          <div className="mb-4 p-3 bg-emerald-50 border border-emerald-200 text-xs text-emerald-800 flex items-start gap-2.5">
             <CheckCircle2 size={15} className="shrink-0 mt-0.5 text-emerald-600" />
-            <span>{successMessage}</span>
+            <span>{infoNotice}</span>
           </div>
         )}
 
-        {/* TAB 1: EMAIL OTP AUTHENTICATION */}
-        {activeTab === 'otp' && (
+        {/* MODE 1: PASSWORD AUTHENTICATION (DEFAULT ENTERPRISE STANDARD) */}
+        {authMode === 'password' && (
+          <form onSubmit={handlePasswordSubmit} className="space-y-4">
+            <div>
+              <label className="block text-xs font-semibold text-[#222222] mb-1.5">
+                Work Email Address
+              </label>
+              <div className="relative">
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="name@company.com"
+                  autoComplete="email"
+                  required
+                  className="w-full px-3.5 py-2.5 text-xs border border-[#CCCCCC] focus:border-black focus:ring-1 focus:ring-black focus:outline-none bg-white font-mono placeholder:text-gray-400 transition-colors"
+                />
+                <Mail size={14} className="absolute right-3.5 top-3.5 text-[#888888] pointer-events-none" />
+              </div>
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="text-xs font-semibold text-[#222222]">Password</label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAuthMode('otp');
+                    setOtpSent(false);
+                    setError(null);
+                    setInfoNotice(null);
+                  }}
+                  className="text-[11px] text-[#555555] hover:text-black hover:underline"
+                >
+                  Forgot password?
+                </button>
+              </div>
+
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Enter your password"
+                  autoComplete="current-password"
+                  required
+                  className="w-full px-3.5 py-2.5 text-xs border border-[#CCCCCC] focus:border-black focus:ring-1 focus:ring-black focus:outline-none bg-white font-mono placeholder:text-gray-400 transition-colors"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3.5 top-3.5 text-[#888888] hover:text-[#111111]"
+                  tabIndex={-1}
+                >
+                  {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+                </button>
+              </div>
+            </div>
+
+            <Button
+              type="submit"
+              variant="primary"
+              size="md"
+              className="w-full justify-center mt-2 py-2.5"
+              isLoading={loading}
+            >
+              Sign In <ArrowRight size={14} />
+            </Button>
+
+            {/* Clean Divider & Alternative OTP Access */}
+            <div className="pt-3">
+              <div className="relative flex py-2 items-center">
+                <div className="flex-grow border-t border-[#E5E5E5]"></div>
+                <span className="shrink mx-3 text-[10px] uppercase font-bold text-[#999999] tracking-wider">
+                  Or
+                </span>
+                <div className="flex-grow border-t border-[#E5E5E5]"></div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setAuthMode('otp');
+                  setOtpSent(false);
+                  setError(null);
+                  setInfoNotice(null);
+                }}
+                className="w-full mt-1 py-2 text-xs font-medium text-[#444444] hover:text-black border border-[#D5D5D4] hover:border-black bg-white hover:bg-[#FAFAF9] transition-all flex items-center justify-center gap-2"
+              >
+                <KeyRound size={13} />
+                <span>Sign in with One-Time Code (Email OTP)</span>
+              </button>
+            </div>
+          </form>
+        )}
+
+        {/* MODE 2: EMAIL OTP AUTHENTICATION */}
+        {authMode === 'otp' && (
           <div>
             {!otpSent ? (
-              <form onSubmit={handleSendOtp} className="space-y-4">
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  handleSendOtp();
+                }}
+                className="space-y-4"
+              >
                 <div>
-                  <label className="block text-xs font-semibold text-[#111111] mb-1.5">
-                    Corporate Email Address
+                  <label className="block text-xs font-semibold text-[#222222] mb-1.5">
+                    Work Email Address
                   </label>
                   <div className="relative">
                     <input
                       type="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      placeholder="e.g. accounts@zawrindustries.com"
+                      placeholder="name@company.com"
+                      autoComplete="email"
                       required
-                      className="w-full px-3 py-2.5 text-xs border border-[#CCCCCC] focus:border-black focus:outline-none bg-white font-mono placeholder:text-gray-400"
+                      className="w-full px-3.5 py-2.5 text-xs border border-[#CCCCCC] focus:border-black focus:ring-1 focus:ring-black focus:outline-none bg-white font-mono placeholder:text-gray-400"
                     />
-                    <Mail
-                      size={14}
-                      className="absolute right-3 top-3 text-[#888888] pointer-events-none"
-                    />
+                    <Mail size={14} className="absolute right-3.5 top-3.5 text-[#888888] pointer-events-none" />
                   </div>
                   <p className="text-[11px] text-[#777777] mt-1.5">
-                    We will send an instant 6-digit OTP to your inbox via accounts@zawrindustries.com.
+                    A single-use 6-digit code will be sent to your email inbox.
                   </p>
                 </div>
 
@@ -319,185 +422,120 @@ export default function LoginPage() {
                   type="submit"
                   variant="primary"
                   size="md"
-                  className="w-full justify-center"
+                  className="w-full justify-center py-2.5"
                   isLoading={loading}
                 >
                   Send Verification Code <ArrowRight size={14} />
                 </Button>
+
+                <div className="pt-2 text-center">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAuthMode('password');
+                      setError(null);
+                      setInfoNotice(null);
+                    }}
+                    className="text-xs text-[#666666] hover:text-black hover:underline"
+                  >
+                    ← Return to password sign-in
+                  </button>
+                </div>
               </form>
             ) : (
-              <form onSubmit={handleVerifyOtp} className="space-y-4">
+              <form onSubmit={handleVerifyOtp} className="space-y-5">
                 <div>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <label className="text-xs font-semibold text-[#111111]">
-                      6-Digit Security Code
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="text-xs font-semibold text-[#222222]">
+                      6-Digit Code
                     </label>
                     <span className="text-[11px] font-mono text-[#666666]">
                       Expires in: <strong className="text-black">{formatTimer(otpTimer)}</strong>
                     </span>
                   </div>
 
-                  <input
-                    type="text"
-                    maxLength={6}
-                    value={otpCode}
-                    onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
-                    placeholder="• • • • • •"
-                    autoFocus
-                    required
-                    className="w-full text-center tracking-[0.5em] font-mono text-2xl py-3 border-2 border-[#111111] bg-[#FAFAF9] focus:outline-none focus:bg-white"
-                  />
-                  <div className="flex items-center justify-between mt-2 text-[11px]">
-                    <span className="text-[#666666] truncate max-w-[200px]">
-                      Sent to: <strong>{email}</strong>
-                    </span>
+                  {/* 6 Individual Digit Inputs */}
+                  <div className="flex gap-2 justify-between">
+                    {otpCode.map((digit, idx) => (
+                      <input
+                        key={idx}
+                        ref={(el) => {
+                          otpInputsRef.current[idx] = el;
+                        }}
+                        type="text"
+                        inputMode="numeric"
+                        maxLength={6}
+                        value={digit}
+                        onChange={(e) => handleOtpDigitChange(idx, e.target.value)}
+                        onKeyDown={(e) => handleOtpKeyDown(idx, e)}
+                        className="w-11 h-12 text-center text-lg font-mono font-bold border border-[#BBBBBB] focus:border-black focus:ring-1 focus:ring-black focus:outline-none bg-[#FAFAF9] transition-all"
+                      />
+                    ))}
+                  </div>
+
+                  <div className="flex items-center justify-between mt-3 text-[11px]">
+                    <span className="text-[#666666]">Didn&apos;t receive code?</span>
                     <button
                       type="button"
                       onClick={() => handleSendOtp()}
                       disabled={loading || otpTimer > 540}
-                      className="text-[#111111] font-medium hover:underline flex items-center gap-1 disabled:opacity-50"
+                      className="text-black font-semibold hover:underline flex items-center gap-1 disabled:opacity-40 disabled:hover:no-underline"
                     >
-                      <RefreshCw size={11} /> Resend OTP
+                      <RefreshCw size={11} /> Resend Code
                     </button>
                   </div>
                 </div>
 
-                <div className="pt-2 space-y-2">
+                <div className="space-y-2 pt-1">
                   <Button
                     type="submit"
                     variant="primary"
                     size="md"
-                    className="w-full justify-center"
+                    className="w-full justify-center py-2.5"
                     isLoading={loading}
                   >
-                    Verify & Access Dashboard <ArrowRight size={14} />
+                    Verify & Sign In <ArrowRight size={14} />
                   </Button>
-                  <Button
+
+                  <button
                     type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="w-full justify-center text-xs text-[#666666]"
                     onClick={() => {
                       setOtpSent(false);
-                      setOtpCode('');
+                      setOtpCode(['', '', '', '', '', '']);
+                      setError(null);
+                      setInfoNotice(null);
                     }}
+                    className="w-full text-center text-xs text-[#666666] hover:text-black hover:underline py-1"
                   >
-                    Change Email Address
-                  </Button>
+                    Use a different email address
+                  </button>
                 </div>
               </form>
             )}
           </div>
         )}
+      </div>
 
-        {/* TAB 2: PASSWORD AUTHENTICATION */}
-        {activeTab === 'password' && (
-          <form onSubmit={handlePasswordLogin} className="space-y-4">
-            <div>
-              <label className="block text-xs font-semibold text-[#111111] mb-1.5">
-                Email Address
-              </label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="accounts@zawrindustries.com"
-                required
-                className="w-full px-3 py-2.5 text-xs border border-[#CCCCCC] focus:border-black focus:outline-none bg-white font-mono"
-              />
-            </div>
-
-            <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label className="text-xs font-semibold text-[#111111]">Password</label>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setActiveTab('otp');
-                    setOtpSent(false);
-                    setError(null);
-                  }}
-                  className="text-[11px] text-[#555555] hover:text-black hover:underline"
-                >
-                  Forgot / Set Password via OTP
-                </button>
-              </div>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter your password"
-                required
-                className="w-full px-3 py-2.5 text-xs border border-[#CCCCCC] focus:border-black focus:outline-none bg-white font-mono"
-              />
-            </div>
-
-            <Button
-              type="submit"
-              variant="primary"
-              size="md"
-              className="w-full justify-center"
-              isLoading={loading}
-            >
-              Sign In with Password <ArrowRight size={14} />
-            </Button>
-          </form>
-        )}
-
-        {/* Seeded Organizational User Fast-Fill (For RBAC testing) */}
-        <div className="mt-8 pt-5 border-t border-[#E5E5E5]">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-[10px] uppercase font-bold tracking-wider text-[#777777]">
-              Pre-Configured Enterprise Roles
-            </span>
-            <span className="text-[10px] text-[#888888] font-mono">RBAC Directory</span>
-          </div>
-          <div className="grid grid-cols-2 gap-1.5">
-            {defaultRecognizedUsers.slice(0, 4).map((u) => (
-              <button
-                key={u.id}
-                type="button"
-                onClick={() => handleSelectPreSeeded(u.email)}
-                className={`text-left p-2 border transition-all text-xs ${
-                  email === u.email
-                    ? 'border-black bg-[#F4F3EF] font-semibold text-black'
-                    : 'border-[#E5E5E5] bg-white text-[#444444] hover:border-[#999999]'
-                }`}
-              >
-                <div className="text-[11px] truncate font-medium text-[#111111]">
-                  {u.fullName}
-                </div>
-                <div className="text-[9px] uppercase tracking-wider text-[#777777] font-mono">
-                  {u.role.replace('_', ' ')}
-                </div>
-              </button>
-            ))}
-          </div>
-          <p className="text-[10px] text-[#888888] mt-2">
-            Tip: You can also enter any custom business or personal email; it will receive a live OTP code and provision your role.
-          </p>
+      {/* Enterprise Security Legal Footer */}
+      <div className="text-center text-[11px] text-[#888888] mt-6 flex flex-col items-center gap-1">
+        <div className="flex items-center gap-1.5 font-medium text-[#666666]">
+          <ShieldCheck size={13} className="text-[#333333]" />
+          <span>Zawr Industries LLP • Unified Enterprise Financial Operating System</span>
         </div>
+        <span>Protected by cryptographically signed HTTP-only sessions</span>
       </div>
 
-      {/* Footer Info */}
-      <div className="text-center text-[11px] text-[#888888] mt-6">
-        Zawr Books Enterprise Financial Accounting • Authenticated RBAC Engine<br />
-        Protected by SHA-256 Multi-Factor Cryptographic Session Verification
-      </div>
-
-      {/* Set Password Prompt Modal (Optional after OTP Login) */}
+      {/* Optional Password Setup Modal (Post-OTP for accounts with no password) */}
       <SetPasswordModal
         isOpen={isPasswordModalOpen}
-        targetEmail={authenticatedUserEmail || email}
+        targetEmail={verifiedEmail || email}
         onClose={() => {
           setIsPasswordModalOpen(false);
-          const current = globalDataStore.getState().currentUser;
-          redirectToAppropriateSurface(current.role);
+          router.replace(returnUrl);
         }}
         onSuccess={() => {
           setIsPasswordModalOpen(false);
-          const current = globalDataStore.getState().currentUser;
-          redirectToAppropriateSurface(current.role);
+          router.replace(returnUrl);
         }}
       />
     </div>

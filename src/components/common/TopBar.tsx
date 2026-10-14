@@ -54,7 +54,12 @@ export const TopBar: React.FC = () => {
   const canAccessControl = ['owner', 'director', 'finance_admin'].includes(role);
   const canAccessMobile = true; // All authenticated users have access to Mobile PWA
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+    } catch (e) {
+      console.warn('Logout API error:', e);
+    }
     globalDataStore.logout();
     setUserDropdownOpen(false);
     router.push('/login');

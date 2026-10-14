@@ -60,56 +60,28 @@ export interface DataStoreState {
   }>;
 }
 
-// Initial recognized organization users
+// Initial recognized organization users (Strictly 3 authorized accounts)
 export const defaultRecognizedUsers: UserProfile[] = [
   {
-    id: 'user-admin',
-    email: 'admin@company.com',
-    fullName: 'Administrator',
-    role: 'owner',
-    department: 'Executive Management',
-  },
-  {
-    id: 'user-ceo',
+    id: 'usr-ceo',
     email: 'ceo@zawrindustries.com',
-    fullName: 'Syed Ismail (CEO)',
-    role: 'owner',
-    department: 'Executive Management',
+    fullName: 'Syed Ismail Zabiulla',
+    role: 'owner', // Full Super Admin Rights
+    department: 'Director',
   },
   {
-    id: 'user-finance',
+    id: 'usr-md',
+    email: 'md@zawrindustries.com',
+    fullName: 'Mohammed Ahmed',
+    role: 'director',
+    department: 'Director',
+  },
+  {
+    id: 'usr-finance',
     email: 'accounts@zawrindustries.com',
     fullName: 'Zawr Finance Accounts',
     role: 'finance_admin',
     department: 'Corporate Finance',
-  },
-  {
-    id: 'user-director',
-    email: 'md@zawrindustries.com',
-    fullName: 'Managing Director',
-    role: 'director',
-    department: 'Board of Directors',
-  },
-  {
-    id: 'user-accountant',
-    email: 'accountant@company.com',
-    fullName: 'Senior Accountant',
-    role: 'accountant',
-    department: 'Accounts & Taxation',
-  },
-  {
-    id: 'user-employee',
-    email: 'employee@company.com',
-    fullName: 'Operations Staff',
-    role: 'employee',
-    department: 'Operations',
-  },
-  {
-    id: 'user-auditor',
-    email: 'auditor@company.com',
-    fullName: 'Statutory Auditor',
-    role: 'auditor',
-    department: 'Internal Audit & Risk',
   },
 ];
 
@@ -156,12 +128,27 @@ class DataStore {
       if (saved) {
         const parsed = JSON.parse(saved);
         
-        // Merge recognized users if any missing
-        const existingUsers: UserProfile[] = parsed.users || [];
-        const mergedUsers = [...existingUsers];
-        for (const defaultUser of defaultRecognizedUsers) {
-          if (!mergedUsers.some((u) => u.email.toLowerCase() === defaultUser.email.toLowerCase())) {
-            mergedUsers.push(defaultUser);
+        // Strictly filter to the 3 authorized accounts
+        const allowedEmails = new Set(defaultRecognizedUsers.map((u) => u.email.toLowerCase()));
+        const existingUsers: UserProfile[] = (parsed.users || []).filter((u: UserProfile) =>
+          allowedEmails.has(u.email.toLowerCase())
+        );
+
+        const mergedUsers = defaultRecognizedUsers.map((def) => {
+          const match = existingUsers.find((eu) => eu.email.toLowerCase() === def.email.toLowerCase());
+          return match
+            ? { ...def, passwordHash: match.passwordHash || def.passwordHash, lastLoginAt: match.lastLoginAt || def.lastLoginAt }
+            : { ...def };
+        });
+
+        // Determine active currentUser
+        let activeUser = parsed.currentUser;
+        if (!activeUser || !allowedEmails.has(activeUser.email?.toLowerCase())) {
+          activeUser = defaultRecognizedUsers[0];
+        } else {
+          const matching = defaultRecognizedUsers.find((u) => u.email.toLowerCase() === activeUser.email.toLowerCase());
+          if (matching) {
+            activeUser = { ...activeUser, fullName: matching.fullName, role: matching.role, department: matching.department };
           }
         }
 
@@ -169,6 +156,7 @@ class DataStore {
           ...this.state,
           ...parsed,
           users: mergedUsers,
+          currentUser: activeUser,
           isAuthenticated: typeof parsed.isAuthenticated === 'boolean' ? parsed.isAuthenticated : false,
         };
         this.isLoadedFromStorage = true;

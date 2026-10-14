@@ -19,6 +19,7 @@ import {
   Mail,
   Building2,
   Lock,
+  Download,
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -228,8 +229,31 @@ export default function MobileProfilePage() {
         </Card>
       )}
 
+      {/* Native Android APK Card */}
+      <Card noPadding className="shadow-2xs">
+        <div className="p-3.5 bg-white flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-[#111111] text-white flex items-center justify-center rounded-lg shrink-0">
+              <Smartphone size={20} />
+            </div>
+            <div>
+              <div className="text-xs font-bold text-[#111111]">Zawr Books for Android</div>
+              <div className="text-[10px] text-[#666666]">v1.0.0 Stable • Signed APK (~73 KB)</div>
+            </div>
+          </div>
+          <a
+            href="/ZawrBooks.apk"
+            download="ZawrBooks.apk"
+            className="px-3 py-1.5 bg-[#111111] hover:bg-black text-white text-xs font-bold flex items-center gap-1.5 active:scale-95 transition-all shadow-sm shrink-0"
+          >
+            <Download size={13} />
+            <span>Install APK</span>
+          </a>
+        </div>
+      </Card>
+
       {/* Logout Action */}
-      <div className="pt-2">
+      <div className="pt-1">
         <Button
           variant="outline"
           size="lg"

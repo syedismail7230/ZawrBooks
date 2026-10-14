@@ -63,3 +63,12 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: #AAAAAA;
 }
+
+/* Hide scrollbar for clean mobile horizontal pill navigation */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}

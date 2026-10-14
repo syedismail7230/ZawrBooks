@@ -204,8 +204,8 @@ export const BalancedJournalModal: React.FC<BalancedJournalModalProps> = ({
         </div>
 
         {/* Journal Lines Table */}
-        <div className="border border-[#E5E5E5]">
-          <table className="w-full text-left financial-table">
+        <div className="border border-[#E5E5E5] overflow-x-auto">
+          <table className="w-full text-left financial-table min-w-[600px]">
             <thead>
               <tr>
                 <th className="p-2 w-10">#</th>

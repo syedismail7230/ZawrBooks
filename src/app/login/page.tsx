@@ -455,7 +455,7 @@ function LoginForm() {
                   </div>
 
                   {/* 6 Individual Digit Inputs */}
-                  <div className="flex gap-2 justify-between">
+                  <div className="flex gap-1.5 sm:gap-2 justify-between">
                     {otpCode.map((digit, idx) => (
                       <input
                         key={idx}
@@ -468,7 +468,7 @@ function LoginForm() {
                         value={digit}
                         onChange={(e) => handleOtpDigitChange(idx, e.target.value)}
                         onKeyDown={(e) => handleOtpKeyDown(idx, e)}
-                        className="w-11 h-12 text-center text-lg font-mono font-bold border border-[#BBBBBB] focus:border-black focus:ring-1 focus:ring-black focus:outline-none bg-[#FAFAF9] transition-all"
+                        className="w-9 sm:w-11 h-11 sm:h-12 text-center text-base sm:text-lg font-mono font-bold border border-[#BBBBBB] focus:border-black focus:ring-1 focus:ring-black focus:outline-none bg-[#FAFAF9] transition-all"
                       />
                     ))}
                   </div>

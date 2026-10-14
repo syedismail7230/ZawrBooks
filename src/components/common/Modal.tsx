@@ -48,7 +48,7 @@ export const Modal: React.FC<ModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4">
       {/* Backdrop */}
       <div
         className="fixed inset-0 bg-black/40 backdrop-blur-[1px] transition-opacity"
@@ -58,12 +58,12 @@ export const Modal: React.FC<ModalProps> = ({
       {/* Modal Dialog */}
       <div
         className={cn(
-          'relative w-full bg-white border border-[#111111] shadow-2xl rounded-none z-10 max-h-[92vh] flex flex-col',
+          'relative w-full bg-white border border-[#111111] shadow-2xl rounded-none z-10 max-h-[96vh] sm:max-h-[92vh] flex flex-col',
           widthClasses[maxWidth]
         )}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-3.5 border-b border-[#E5E5E5] bg-[#F4F3EF]">
+        <div className="flex items-center justify-between px-3.5 sm:px-5 py-2.5 sm:py-3.5 border-b border-[#E5E5E5] bg-[#F4F3EF]">
           <div>
             <h2 className="text-xs font-bold uppercase tracking-wider text-[#111111]">
               {title}
@@ -81,7 +81,7 @@ export const Modal: React.FC<ModalProps> = ({
         </div>
 
         {/* Body */}
-        <div className="p-5 overflow-y-auto flex-1">{children}</div>
+        <div className="p-3.5 sm:p-5 overflow-y-auto flex-1">{children}</div>
       </div>
     </div>
   );

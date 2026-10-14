@@ -180,7 +180,7 @@ export const TopBar: React.FC = () => {
                 </button>
 
                 {userDropdownOpen && (
-                  <div className="absolute right-0 mt-1 w-64 bg-white border border-[#111111] shadow-xl z-50 p-2 animate-in fade-in zoom-in-95 duration-100">
+                  <div className="absolute right-0 mt-1 w-64 max-w-[calc(100vw-1.5rem)] bg-white border border-[#111111] shadow-xl z-50 p-2 animate-in fade-in zoom-in-95 duration-100">
                     <div className="px-2 py-2 border-b border-[#E5E5E5]">
                       <div className="text-xs font-bold text-[#111111]">{currentUser.fullName}</div>
                       <div className="text-[11px] text-[#666666] font-mono truncate">{currentUser.email}</div>
@@ -219,7 +219,40 @@ export const TopBar: React.FC = () => {
                         </Link>
                       )}
 
-
+                      {/* Mobile Surface Navigation */}
+                      <div className="md:hidden py-1 border-t border-[#E5E5E5] my-1">
+                        <div className="px-2 py-0.5 text-[9px] uppercase font-bold text-[#888888] font-mono">
+                          Switch Surface
+                        </div>
+                        {canAccessWeb && (
+                          <Link
+                            href="/web"
+                            onClick={() => setUserDropdownOpen(false)}
+                            className="w-full text-left px-2 py-1.5 text-xs text-[#333333] hover:bg-[#F4F3EF] hover:text-black flex items-center gap-2 transition-colors"
+                          >
+                            <Laptop size={13} className="text-[#666666]" />
+                            <span>Finance Web</span>
+                          </Link>
+                        )}
+                        {canAccessControl && (
+                          <Link
+                            href="/control"
+                            onClick={() => setUserDropdownOpen(false)}
+                            className="w-full text-left px-2 py-1.5 text-xs text-[#333333] hover:bg-[#F4F3EF] hover:text-black flex items-center gap-2 transition-colors"
+                          >
+                            <Shield size={13} className="text-[#666666]" />
+                            <span>Control Centre</span>
+                          </Link>
+                        )}
+                        <Link
+                          href="/mobile"
+                          onClick={() => setUserDropdownOpen(false)}
+                          className="w-full text-left px-2 py-1.5 text-xs text-[#333333] hover:bg-[#F4F3EF] hover:text-black flex items-center gap-2 transition-colors"
+                        >
+                          <img src="/favicon.png" alt="Mobile App" className="w-3.5 h-3.5 object-contain" />
+                          <span>Mobile Web App</span>
+                        </Link>
+                      </div>
 
                       <div className="my-1 border-t border-[#E5E5E5]" />
 

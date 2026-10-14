@@ -86,6 +86,7 @@ export default function ScheduledReportsPage() {
     setTestResultMsg(null);
 
     const reportLabels: Record<ReportType, string> = {
+      ExecutiveCombined: 'Comprehensive Executive Dossier (Combined Report)',
       ProfitLoss: 'Profit & Loss Statement',
       BalanceSheet: 'Balance Sheet',
       TrialBalance: 'Trial Balance',
@@ -264,6 +265,73 @@ export default function ScheduledReportsPage() {
           </button>
         </div>
       )}
+
+      {/* Executive Combined Financial Dossier Feature Banner */}
+      <div className="bg-[#111111] text-white p-4 rounded-sm border border-[#222222] flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 bg-[#10B981] text-black">
+              Executive Feature
+            </span>
+            <span className="text-xs text-[#888888] font-mono">Ind AS & Schedule III Multi-Statement Compilation</span>
+          </div>
+          <h3 className="text-sm font-bold text-white tracking-wide">
+            Comprehensive Executive Financial Dossier (All Reports in One)
+          </h3>
+          <p className="text-xs text-[#AAAAAA] max-w-xl">
+            Unified C-suite financial dossier combining Profit &amp; Loss, Balance Sheet, Trial Balance, and GSTR-3B Tax Summary into an executive email with an attached 6-tab Excel workbook (<code>ZawrBooks_Executive_Dossier_FY2026.xlsx</code>).
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            onClick={() => {
+              setReportName('Comprehensive Executive Financial Dossier');
+              setReportType('ExecutiveCombined');
+              setIsCreateOpen(true);
+            }}
+            className="px-3 py-1.5 border border-white/20 text-white hover:bg-white/10 text-xs font-semibold flex items-center gap-1.5 transition-colors"
+          >
+            <CalendarClock size={13} /> Schedule Cadence
+          </button>
+
+          <button
+            disabled={runningId === 'executive-combined-quick'}
+            onClick={async () => {
+              setRunningId('executive-combined-quick');
+              setTriggerAlert(null);
+              try {
+                const res = await fetch('/api/email/send', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    to: ['admin@zawrindustries.com'],
+                    reportType: 'ExecutiveCombined',
+                    reportName: 'Comprehensive Executive Financial Dossier',
+                    frequency: 'Daily',
+                    storeState: globalDataStore.getState(),
+                  }),
+                });
+                const data = await res.json();
+                setRunningId(null);
+                if (data.success) {
+                  setTriggerAlert(
+                    `Dispatched Comprehensive Executive Dossier with 6-tab Excel workbook (${data.attachmentName}) to admin@zawrindustries.com (Message ID: ${data.messageId})`
+                  );
+                } else {
+                  setTriggerAlert(`Dispatch note: ${data.error || 'Check SMTP config'}`);
+                }
+              } catch (err: any) {
+                setRunningId(null);
+                setTriggerAlert(`Error dispatching dossier: ${err.message}`);
+              }
+            }}
+            className="px-3 py-1.5 bg-[#10B981] hover:bg-[#059669] text-black font-bold text-xs flex items-center gap-1.5 transition-colors disabled:opacity-50"
+          >
+            {runningId === 'executive-combined-quick' ? 'Compiling Dossier...' : '⚡ Dispatch Executive Dossier Now'}
+          </button>
+        </div>
+      </div>
 
       {/* Configured Report Schedules Grid */}
       <div className="space-y-4">
@@ -446,6 +514,7 @@ export default function ScheduledReportsPage() {
                 onChange={(e) => setReportType(e.target.value as ReportType)}
                 className="w-full bg-white border border-[#CCCCCC] p-2 text-xs outline-none focus:border-black"
               >
+                <option value="ExecutiveCombined">⭐ Executive Combined Dossier (All Reports in One)</option>
                 <option value="ProfitLoss">Profit & Loss Statement</option>
                 <option value="BalanceSheet">Balance Sheet</option>
                 <option value="TrialBalance">Trial Balance</option>
@@ -573,6 +642,7 @@ export default function ScheduledReportsPage() {
               onChange={(e) => setTestReportType(e.target.value as ReportType)}
               className="w-full bg-white border border-[#CCCCCC] p-2 text-xs outline-none focus:border-black font-semibold text-[#111111]"
             >
+              <option value="ExecutiveCombined">⭐ Executive Combined Dossier (All Reports in One)</option>
               <option value="ProfitLoss">Profit & Loss Statement</option>
               <option value="BalanceSheet">Balance Sheet</option>
               <option value="TrialBalance">Trial Balance</option>

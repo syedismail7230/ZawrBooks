@@ -333,7 +333,8 @@ export type ReportType =
   | 'ARAgeing'
   | 'APAgeing'
   | 'DayBook'
-  | 'AuditTrail';
+  | 'AuditTrail'
+  | 'ExecutiveCombined';
 
 export interface ReportSchedule {
   id: string;

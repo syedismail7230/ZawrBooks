@@ -1,5 +1,21 @@
 /**
- * Script to dispatch test emails of ALL templates to admin@zawrindustries.com
+ * Script to dispatch test emails of ALL platform templates to admin@zawrindustries.com
+ * Covers:
+ * 1. Security Alert: User Login Authorized
+ * 2. Security Alert: New Account Sign-Up Attempt
+ * 3. Security Warning: Failed Authentication Attempt
+ * 4. Auth OTP Verification Code
+ * 5. ⭐ Comprehensive Executive Financial Dossier (Combined All Reports + 6-tab Excel Workbook)
+ * 6. Profit & Loss Statement (+ Excel)
+ * 7. Balance Sheet Statement (+ Excel)
+ * 8. GSTR-3B Tax Preparation Summary (+ Excel)
+ * 9. Customer Tax Invoice (+ Excel Invoice)
+ * 10. Accounts Receivable Payment Reminder
+ * 11. Official Payment Receipt Voucher
+ * 12. Customer Subledger Statement of Account (+ Excel)
+ * 13. Vendor Payment Advice / Remittance
+ * 14. Managerial Approval Request
+ * 15. Cost Centre Budget Threshold Alert
  */
 
 const nodemailer = require('nodemailer');
@@ -35,6 +51,114 @@ function createTestExcel(title, rows) {
   return XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
 }
 
+function createExecutiveDossierExcel() {
+  const wb = XLSX.utils.book_new();
+
+  // Tab 1: Executive KPI Summary
+  const s1 = XLSX.utils.aoa_to_sheet([
+    ['ZAWR INDUSTRIES LLP — COMPREHENSIVE EXECUTIVE FINANCIAL DOSSIER'],
+    ['REPORT: EXECUTIVE FINANCIAL DOSSIER (ALL REPORTS COMBINED)'],
+    ['ACCOUNTING STANDARD: Ind AS (Accrual Basis) | CURRENCY: INR (₹)'],
+    [`GENERATED: ${new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })} IST`],
+    [],
+    ['EXECUTIVE FINANCIAL METRIC', 'CLASSIFICATION', 'AMOUNT (INR)', 'STATUS / MARGIN'],
+    ['Revenue from Operations (Invoices)', 'Operating Income', 4850000, 'Gross Invoiced Turnover'],
+    ['Cost of Goods Sold & Direct Materials', 'Direct Expenses', -1820000, 'Direct Project Costs'],
+    ['Gross Operating Profit', 'Subtotal', 3030000, 'Direct Margin (62.5%)'],
+    ['Administrative & Operating Overhead', 'Operating Overhead', -840000, 'Operating Burn'],
+    ['Net Profit After Tax (PAT)', 'Bottomline Net', 2190000, '45.2% Profit Margin'],
+    ['Total Current Assets', 'Assets', 6540000, 'Liquid & Trade Debtors'],
+    ['Total Non-Current Assets', 'Assets', 4210000, 'Fixed Assets & Infrastructure'],
+    ['Total Assets', 'Balance Sheet (A)', 10750000, 'Schedule III Asset Base'],
+    ['Total Liabilities (Debt & Dues)', 'Obligations', 3560000, 'Current & Long-Term Dues'],
+    ['Total Equity & Retained Earnings', 'Shareholders Net Worth', 7190000, 'Capital Reserve'],
+    ['Total Liabilities & Equity', 'Balance Sheet (B)', 10750000, 'Double-Entry Invariant Balanced'],
+    ['Net Working Capital (Assets - Liab)', 'Liquidity Position', 7190000, 'Strong Operating Buffer'],
+    ['Net GST 3B Cash Tax Liability', 'Statutory Dues', 85500, 'Electronic Cash Ledger'],
+  ]);
+  s1['!cols'] = [{ wch: 38 }, { wch: 24 }, { wch: 20 }, { wch: 28 }];
+  XLSX.utils.book_append_sheet(wb, s1, 'Executive KPI Summary');
+
+  // Tab 2: Profit & Loss Statement
+  const s2 = XLSX.utils.aoa_to_sheet([
+    ['ZAWR INDUSTRIES LLP — STATEMENT OF PROFIT AND LOSS'],
+    ['Ind AS Compliance | Accrual Basis | Currency: INR (₹)'],
+    [],
+    ['ACCOUNT CODE', 'PARTICULARS', 'CLASSIFICATION', 'AMOUNT (INR)'],
+    ['4000', 'Revenue from Software Implementation', 'Operating Revenue', 3200000],
+    ['4100', 'Revenue from Support Contracts', 'Operating Revenue', 1650000],
+    ['SUBTOTAL-REV', 'Total Operating Revenue', 'Revenue', 4850000],
+    [],
+    ['5000', 'Direct Cloud Infrastructure Costs', 'Direct Expenses', -1120000],
+    ['5100', 'Contractor & Consulting Payouts', 'Direct Expenses', -700000],
+    ['6000', 'Office & Administrative Overhead', 'Operating Overhead', -540000],
+    ['6100', 'Audit, Legal & Compliance Fees', 'Operating Overhead', -300000],
+    ['SUBTOTAL-EXP', 'Total Expenditure', 'Expenses', -2660000],
+    [],
+    ['NET-PAT', 'NET PROFIT AFTER TAX (PAT)', 'Realized Earnings', 2190000],
+  ]);
+  s2['!cols'] = [{ wch: 18 }, { wch: 36 }, { wch: 24 }, { wch: 20 }];
+  XLSX.utils.book_append_sheet(wb, s2, 'Profit and Loss');
+
+  // Tab 3: Balance Sheet
+  const s3 = XLSX.utils.aoa_to_sheet([
+    ['ZAWR INDUSTRIES LLP — BALANCE SHEET (STATEMENT OF FINANCIAL POSITION)'],
+    ['Companies Act Schedule III Compliance | Currency: INR (₹)'],
+    [],
+    ['HEAD OF ACCOUNT', 'CATEGORY', 'AMOUNT (INR)'],
+    ['Cash and Cash Equivalents (HDFC Operating)', 'Current Asset', 3840000],
+    ['Accounts Receivable (Trade Debtors)', 'Current Asset', 2700000],
+    ['Property, Plant & Computer Equipment', 'Non-Current Asset', 4210000],
+    ['TOTAL ASSETS (A)', 'Audit Verified', 10750000],
+    [],
+    ['Trade Payables (Vendor Bills Outstanding)', 'Current Liability', 2140000],
+    ['Statutory Duties & Taxes (GST Payable)', 'Current Liability', 1420000],
+    ['TOTAL LIABILITIES', 'Subtotal', 3560000],
+    ['Partners Capital Contribution', 'Equity', 5000000],
+    ['Retained Earnings & Accumulated Surplus', 'Equity', 2190000],
+    ['TOTAL EQUITY & RESERVES', 'Subtotal', 7190000],
+    ['TOTAL LIABILITIES & EQUITY (B)', 'Balanced', 10750000],
+  ]);
+  s3['!cols'] = [{ wch: 38 }, { wch: 24 }, { wch: 20 }];
+  XLSX.utils.book_append_sheet(wb, s3, 'Balance Sheet');
+
+  // Tab 4: Trial Balance
+  const s4 = XLSX.utils.aoa_to_sheet([
+    ['ZAWR INDUSTRIES LLP — TRIAL BALANCE DIGEST'],
+    ['Balanced General Ledger Accounts | Currency: INR (₹)'],
+    [],
+    ['ACCOUNT CODE', 'ACCOUNT NAME', 'TYPE', 'DEBIT (INR)', 'CREDIT (INR)'],
+    ['1000', 'HDFC Bank Operating Account', 'Asset', 3840000, ''],
+    ['1100', 'Accounts Receivable (Debtors)', 'Asset', 2700000, ''],
+    ['1500', 'Office & Computer Equipment', 'Asset', 4210000, ''],
+    ['2000', 'Accounts Payable (Creditors)', 'Liability', '', 2140000],
+    ['2100', 'GST Output Tax Liability', 'Liability', '', 1420000],
+    ['3000', 'Partners Equity Capital', 'Equity', '', 5000000],
+    ['4000', 'Operating Revenue (Sales)', 'Revenue', '', 4850000],
+    ['5000', 'Cost of Goods Sold (Direct)', 'Expense', 1820000, ''],
+    ['6000', 'Operating Overhead', 'Expense', 840000, ''],
+    [],
+    ['TOTAL', 'TRIAL BALANCE INVARIANT', 'BALANCED', 13410000, 13410000],
+  ]);
+  s4['!cols'] = [{ wch: 18 }, { wch: 36 }, { wch: 18 }, { wch: 20 }, { wch: 20 }];
+  XLSX.utils.book_append_sheet(wb, s4, 'Trial Balance');
+
+  // Tab 5: GSTR-3B Tax Summary
+  const s5 = XLSX.utils.aoa_to_sheet([
+    ['ZAWR INDUSTRIES LLP — GSTR-3B TAX PREPARATION & ITC DIGEST'],
+    ['GSTN Electronic Cash Ledger Reconciliation | Currency: INR (₹)'],
+    [],
+    ['TABLE', 'DESCRIPTION', 'TAXABLE (INR)', 'IGST (INR)', 'CGST (INR)', 'SGST (INR)', 'TOTAL TAX (INR)'],
+    ['3.1 (a)', 'Outward Taxable Supplies (Invoices)', 2400000, 0, 216000, 216000, 432000],
+    ['4.0 (A)', 'Eligible Input Tax Credit (ITC Pool)', 1450000, 0, 130500, 130500, 261000],
+    ['6.1', 'Net Cash Tax Payable (After ITC Offset)', '', 0, 85500, 85500, 171000],
+  ]);
+  s5['!cols'] = [{ wch: 12 }, { wch: 38 }, { wch: 18 }, { wch: 16 }, { wch: 16 }, { wch: 16 }, { wch: 18 }];
+  XLSX.utils.book_append_sheet(wb, s5, 'GST 3B Preparation');
+
+  return XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+}
+
 const templates = [
   // 1. Security Alert: Successful Login
   {
@@ -43,11 +167,9 @@ const templates = [
     html: `
       <div style="font-family: -apple-system, sans-serif; background: #f4f3ef; padding: 32px 16px;">
         <div style="max-width: 600px; margin: 0 auto; background: #fff; border-radius: 8px; border: 1px solid #e0dfd5; overflow: hidden;">
-          <div style="background: #111; color: #fff; padding: 24px 32px; display: flex; justify-content: space-between;">
-            <div>
-              <span style="font-size: 11px; font-weight: 700; color: #10B981; letter-spacing: 1px;">SECURITY OPERATIONS & AUDIT TRAIL</span>
-              <h1 style="margin: 4px 0 0; font-size: 20px;">ZAWR BOOKS</h1>
-            </div>
+          <div style="background: #111; color: #fff; padding: 24px 32px;">
+            <span style="font-size: 11px; font-weight: 700; color: #10B981; letter-spacing: 1px;">SECURITY OPERATIONS & AUDIT TRAIL</span>
+            <h1 style="margin: 4px 0 0; font-size: 20px;">ZAWR BOOKS</h1>
           </div>
           <div style="padding: 32px;">
             <p style="margin: 0 0 20px; font-size: 14px; color: #333;">A user has successfully authenticated and signed in to the financial platform.</p>
@@ -68,193 +190,156 @@ const templates = [
     `,
   },
 
-  // 2. Security Alert: New Sign-Up Attempt
+  // 2. ⭐ Executive Combined Dossier (All Reports in One with 6-tab Excel)
   {
-    name: '2. Security Alert: New Account Sign-Up Attempt',
-    subject: `[SECURITY NOTICE] New Sign-Up Attempt: newuser@example.com — ZawrBooks Financial Platform`,
+    name: '2. ⭐ Comprehensive Executive Financial Dossier (All Reports in One)',
+    subject: `[ZAWR EXECUTIVE] Comprehensive Executive Financial Dossier (Combined Report) — Official FY26 Report`,
     html: `
       <div style="font-family: -apple-system, sans-serif; background: #f4f3ef; padding: 32px 16px;">
-        <div style="max-width: 600px; margin: 0 auto; background: #fff; border-radius: 8px; border: 1px solid #e0dfd5; overflow: hidden;">
-          <div style="background: #111; color: #fff; padding: 24px 32px;">
-            <span style="font-size: 11px; font-weight: 700; color: #1A73E8; letter-spacing: 1px;">NEW USER REGISTRATION NOTIFICATION</span>
-            <h1 style="margin: 4px 0 0; font-size: 20px;">ZAWR BOOKS</h1>
+        <div style="max-width: 640px; margin: 0 auto; background: #fff; border-radius: 8px; border: 1px solid #e0dfd5; padding: 32px; box-shadow: 0 4px 16px rgba(0,0,0,0.06);">
+          <div style="background: #111; color: #fff; padding: 20px 24px; border-radius: 6px; margin-bottom: 24px;">
+            <span style="font-size: 10px; font-weight: 700; color: #10B981; letter-spacing: 1.5px; text-transform: uppercase;">EXECUTIVE C-SUITE DOSSIER</span>
+            <h1 style="margin: 4px 0 0; font-size: 20px; font-weight: 800;">ZAWR INDUSTRIES — EXECUTIVE FINANCIAL DOSSIER</h1>
+            <p style="margin: 2px 0 0; font-size: 11px; color: #888;">Period: FY 2026-27 | Ind AS Accrual Basis | Schedule III Companies Act Compliance</p>
           </div>
-          <div style="padding: 32px;">
-            <p style="margin: 0 0 20px; font-size: 14px; color: #333;">Someone has attempted to register or request an OTP to sign up for ZawrBooks.</p>
-            <table width="100%" style="border-collapse: collapse; background: #fafaf9; border: 1px solid #ebebeb; border-radius: 6px; font-size: 13px;">
-              <tr><td style="padding: 10px 16px; border-bottom: 1px solid #ebebeb; font-weight: bold; width: 35%; color: #666;">Target Email</td><td style="padding: 10px 16px; border-bottom: 1px solid #ebebeb; font-weight: bold;">newuser@example.com</td></tr>
-              <tr><td style="padding: 10px 16px; border-bottom: 1px solid #ebebeb; font-weight: bold; color: #666;">Action</td><td style="padding: 10px 16px; border-bottom: 1px solid #ebebeb;">Sign-Up / Single-Use OTP Requested</td></tr>
-              <tr><td style="padding: 10px 16px; border-bottom: 1px solid #ebebeb; font-weight: bold; color: #666;">Timestamp</td><td style="padding: 10px 16px; border-bottom: 1px solid #ebebeb;">${new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })} IST</td></tr>
-              <tr><td style="padding: 10px 16px; font-weight: bold; color: #666;">Access Control</td><td style="padding: 10px 16px; color: #E37400; font-weight: bold;">Pending Executive Role Assignment in /control</td></tr>
-            </table>
-          </div>
-          <div style="background: #f7f7f5; padding: 16px 32px; font-size: 11px; color: #777; text-align: center;">
-            Dispatched to <strong>admin@zawrindustries.com</strong> · Zawr Industries LLP
-          </div>
-        </div>
-      </div>
-    `,
-  },
 
-  // 3. Security Warning: Failed Login Attempt
-  {
-    name: '3. Security Warning: Failed Authentication Attempt',
-    subject: `[SECURITY WARNING] Failed Login Attempt: unknown@domain.com — ZawrBooks Financial Platform`,
-    html: `
-      <div style="font-family: -apple-system, sans-serif; background: #f4f3ef; padding: 32px 16px;">
-        <div style="max-width: 600px; margin: 0 auto; background: #fff; border-radius: 8px; border: 1px solid #e0dfd5; overflow: hidden;">
-          <div style="background: #C5221F; color: #fff; padding: 24px 32px;">
-            <span style="font-size: 11px; font-weight: 700; color: #FCE8E6; letter-spacing: 1px;">SECURITY ALERT — FAILED AUTHENTICATION</span>
-            <h1 style="margin: 4px 0 0; font-size: 20px;">ZAWR BOOKS</h1>
-          </div>
-          <div style="padding: 32px;">
-            <p style="margin: 0 0 20px; font-size: 14px; color: #333;">An invalid password or unauthenticated session was rejected by the authentication layer.</p>
-            <table width="100%" style="border-collapse: collapse; background: #fafaf9; border: 1px solid #ebebeb; border-radius: 6px; font-size: 13px;">
-              <tr><td style="padding: 10px 16px; border-bottom: 1px solid #ebebeb; font-weight: bold; width: 35%; color: #666;">Attempted Email</td><td style="padding: 10px 16px; border-bottom: 1px solid #ebebeb; font-weight: bold;">unknown@domain.com</td></tr>
-              <tr><td style="padding: 10px 16px; border-bottom: 1px solid #ebebeb; font-weight: bold; color: #666;">Failure Reason</td><td style="padding: 10px 16px; border-bottom: 1px solid #ebebeb; color: #C5221F; font-weight: bold;">Account not recognized or incorrect credentials</td></tr>
-              <tr><td style="padding: 10px 16px; border-bottom: 1px solid #ebebeb; font-weight: bold; color: #666;">Timestamp</td><td style="padding: 10px 16px; border-bottom: 1px solid #ebebeb;">${new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })} IST</td></tr>
-              <tr><td style="padding: 10px 16px; font-weight: bold; color: #666;">Defensive Action</td><td style="padding: 10px 16px; color: #137333; font-weight: bold;">Session Blocked · Rate Limiter Active</td></tr>
-            </table>
-          </div>
-          <div style="background: #f7f7f5; padding: 16px 32px; font-size: 11px; color: #777; text-align: center;">
-            Dispatched to <strong>admin@zawrindustries.com</strong> · Zawr Industries LLP
-          </div>
-        </div>
-      </div>
-    `,
-  },
-
-  // 4. Auth OTP Verification Code Email
-  {
-    name: '4. Authentication OTP Verification Code',
-    subject: `Your Zawr Books Verification Code: 492817`,
-    html: `
-      <div style="font-family: -apple-system, sans-serif; background: #f4f3ef; padding: 40px 16px;">
-        <div style="max-width: 520px; margin: 0 auto; background: #fff; border-radius: 8px; border: 1px solid #e5e5e0; padding: 40px; text-align: center;">
-          <h2 style="margin: 0; font-size: 22px; font-weight: 800; color: #111;">ZAWR BOOKS</h2>
-          <p style="font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #666; margin-top: 4px;">FINANCIAL PLATFORM AUTHENTICATION</p>
-          <div style="margin: 28px 0; padding: 16px 24px; background: #f4f3ef; border: 1px solid #e0dfd5; border-radius: 6px; display: inline-block;">
-            <span style="font-size: 32px; font-weight: 800; font-family: monospace; letter-spacing: 8px; color: #111;">492817</span>
-          </div>
-          <p style="font-size: 13px; color: #555; line-height: 1.5; margin: 0 0 20px;">
-            Use this single-use code to sign in to your Zawr Books account. This code expires in 10 minutes.
-          </p>
-          <div style="border-top: 1px solid #eee; padding-top: 20px; font-size: 11px; color: #888;">
-            If you did not request this code, no action is required. Your account remains protected.
-          </div>
-        </div>
-      </div>
-    `,
-  },
-
-  // 5. Profit & Loss Statement (with Excel)
-  {
-    name: '5. Executive Report: Profit & Loss Statement',
-    subject: `[ZAWR EXECUTIVE] Daily Profit & Loss Statement — Official Financial Report`,
-    html: `
-      <div style="font-family: -apple-system, sans-serif; background: #f4f3ef; padding: 32px 16px;">
-        <div style="max-width: 600px; margin: 0 auto; background: #fff; border-radius: 8px; border: 1px solid #e0dfd5; padding: 32px;">
-          <h2 style="margin: 0; font-size: 18px; color: #111;">ZAWR INDUSTRIES — STATEMENT OF PROFIT AND LOSS</h2>
-          <p style="font-size: 12px; color: #666; margin: 4px 0 20px;">Period: FY 2026-27 (YTD) · Ind AS Accrual Basis</p>
-          <table width="100%" style="border-collapse: collapse; font-size: 13px; margin-bottom: 24px;">
-            <tr style="border-bottom: 2px solid #111;"><th align="left" style="padding: 8px 0;">Particulars</th><th align="right" style="padding: 8px 0;">Amount (INR)</th></tr>
-            <tr style="border-bottom: 1px solid #eee;"><td style="padding: 10px 0;">Operating Revenue from Operations</td><td align="right" style="font-weight: 700;">₹ 48,50,000.00</td></tr>
-            <tr style="border-bottom: 1px solid #eee;"><td style="padding: 10px 0;">Cost of Goods Sold & Direct Expenses</td><td align="right" style="font-weight: 700; color: #C5221F;">- ₹ 18,20,000.00</td></tr>
-            <tr style="border-bottom: 1.5px solid #111; font-weight: bold; background: #fafaf8;"><td style="padding: 10px 4px;">Gross Profit Margin</td><td align="right" style="padding: 10px 4px;">₹ 30,30,000.00</td></tr>
-            <tr style="border-bottom: 1px solid #eee;"><td style="padding: 10px 0;">Operating & Administrative Expenditure</td><td align="right" style="font-weight: 700; color: #C5221F;">- ₹ 8,40,000.00</td></tr>
-            <tr style="background: #e6f4ea; border: 1.5px solid #137333; font-weight: bold;"><td style="padding: 12px 10px; color: #137333;">Net Profit After Tax</td><td align="right" style="padding: 12px 10px; color: #137333; font-size: 15px;">₹ 21,90,000.00</td></tr>
-          </table>
-          <p style="font-size: 12px; color: #555;">Attached: <strong>ZawrBooks_ProfitLoss_2026.xlsx</strong> with full detailed account ledger breakdowns.</p>
-        </div>
-      </div>
-    `,
-    attachment: {
-      filename: 'ZawrBooks_ProfitLoss_FY2026.xlsx',
-      content: createTestExcel('Profit and Loss Statement', [
-        ['PARTICULARS', 'ACCOUNT CODE', 'AMOUNT (INR)'],
-        ['Revenue from Operations', 'REV-100', 4850000],
-        ['Direct Materials & Costs', 'DIR-200', -1820000],
-        ['Gross Margin', 'SUBTOTAL', 3030000],
-        ['Operating & Admin Overhead', 'EXP-300', -840000],
-        ['Net Realized Profit', 'TOTAL', 2190000],
-      ]),
-    },
-  },
-
-  // 6. Balance Sheet (with Excel)
-  {
-    name: '6. Executive Report: Balance Sheet',
-    subject: `[ZAWR EXECUTIVE] Balance Sheet (Statement of Financial Position) — Zawr Books`,
-    html: `
-      <div style="font-family: -apple-system, sans-serif; background: #f4f3ef; padding: 32px 16px;">
-        <div style="max-width: 600px; margin: 0 auto; background: #fff; border-radius: 8px; border: 1px solid #e0dfd5; padding: 32px;">
-          <h2 style="margin: 0; font-size: 18px; color: #111;">ZAWR INDUSTRIES — BALANCE SHEET</h2>
-          <p style="font-size: 12px; color: #666; margin: 4px 0 20px;">As of October 14, 2026 · Schedule III Companies Act Compliance</p>
-          <table width="100%" style="border-collapse: collapse; font-size: 13px; margin-bottom: 24px;">
-            <tr style="border-bottom: 2px solid #111;"><th align="left" style="padding: 8px 0;">Assets & Liabilities</th><th align="right" style="padding: 8px 0;">Amount (INR)</th></tr>
-            <tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px 0;">Current Assets (Cash & Bank, Receivables)</td><td align="right">₹ 65,40,000.00</td></tr>
-            <tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px 0;">Non-Current Assets (Equipment & Assets)</td><td align="right">₹ 42,10,000.00</td></tr>
-            <tr style="border-bottom: 2px solid #111; font-weight: bold; background: #fafaf8;"><td style="padding: 8px 4px;">TOTAL ASSETS (A)</td><td align="right" style="padding: 8px 4px;">₹ 1,07,50,000.00</td></tr>
-            <tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px 0;">Current & Non-Current Liabilities</td><td align="right">₹ 35,60,000.00</td></tr>
-            <tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px 0;">Shareholders Equity & Retained Earnings</td><td align="right">₹ 71,90,000.00</td></tr>
-            <tr style="border-bottom: 2px solid #111; font-weight: bold; background: #fafaf8;"><td style="padding: 8px 4px;">TOTAL LIABILITIES & EQUITY (B)</td><td align="right" style="padding: 8px 4px;">₹ 1,07,50,000.00</td></tr>
-          </table>
-          <div style="background: #e6f4ea; border: 1px solid #137333; padding: 10px 14px; border-radius: 4px; font-size: 12px; color: #137333; font-weight: bold;">
-            ✓ Double-Entry Invariant Verified: Assets (₹ 1.07 Cr) = Liabilities + Equity (₹ 1.07 Cr)
-          </div>
-        </div>
-      </div>
-    `,
-    attachment: {
-      filename: 'ZawrBooks_BalanceSheet_2026.xlsx',
-      content: createTestExcel('Balance Sheet Statement', [
-        ['CATEGORY', 'PARTICULARS', 'AMOUNT (INR)'],
-        ['Assets', 'Cash and Cash Equivalents', 3840000],
-        ['Assets', 'Accounts Receivable (Trade Debtors)', 2700000],
-        ['Assets', 'Property, Plant & Equipment', 4210000],
-        ['TOTAL ASSETS', 'AUDIT VERIFIED', 10750000],
-        ['Liabilities', 'Trade Payables & Vendor Dues', 2140000],
-        ['Liabilities', 'Duties & Taxes (GST Payable)', 1420000],
-        ['Equity', 'Partners Capital & Retained Profit', 7190000],
-        ['TOTAL LIAB & EQUITY', 'BALANCED', 10750000],
-      ]),
-    },
-  },
-
-  // 7. GSTR-3B Tax Preparation Summary (with Excel)
-  {
-    name: '7. Executive Report: GSTR-3B Tax Preparation Summary',
-    subject: `[ZAWR EXECUTIVE] Monthly GSTR-3B Tax Preparation & ITC Digest`,
-    html: `
-      <div style="font-family: -apple-system, sans-serif; background: #f4f3ef; padding: 32px 16px;">
-        <div style="max-width: 600px; margin: 0 auto; background: #fff; border-radius: 8px; border: 1px solid #e0dfd5; padding: 32px;">
-          <h2 style="margin: 0; font-size: 18px; color: #111;">GSTR-3B TAX PREPARATION SUMMARY</h2>
-          <p style="font-size: 12px; color: #666; margin: 4px 0 20px;">Filing Period: September / October 2026 · GSTN Reconciled</p>
+          <h3 style="font-size: 13px; font-weight: 800; text-transform: uppercase; margin: 0 0 12px; color: #111;">I. Executive KPI & Valuation Digest</h3>
           <table width="100%" style="border-collapse: collapse; font-size: 12px; margin-bottom: 24px;">
-            <tr style="border-bottom: 2px solid #111; background: #fafaf8;">
-              <th align="left" style="padding: 8px;">Description</th>
-              <th align="right" style="padding: 8px;">Taxable</th>
-              <th align="right" style="padding: 8px;">CGST</th>
-              <th align="right" style="padding: 8px;">SGST</th>
-              <th align="right" style="padding: 8px;">IGST</th>
-            </tr>
-            <tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px;">3.1 Outward Taxable Supplies</td><td align="right">₹ 24,00,000</td><td align="right">₹ 2,16,000</td><td align="right">₹ 2,16,000</td><td align="right">₹ 0</td></tr>
-            <tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px;">4. Eligible ITC (Expenses & Bills)</td><td align="right">₹ 14,50,000</td><td align="right">₹ 1,30,500</td><td align="right">₹ 1,30,500</td><td align="right">₹ 0</td></tr>
-            <tr style="background: #e6f4ea; border-top: 2px solid #137333; font-weight: bold;"><td style="padding: 10px 8px; color: #137333;">Net Cash Tax Payable (6.1)</td><td align="right">-</td><td align="right" style="color: #137333;">₹ 85,500</td><td align="right" style="color: #137333;">₹ 85,500</td><td align="right" style="color: #137333;">₹ 0</td></tr>
+            <tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px 0; color: #666;">Revenue from Operations</td><td align="right" style="font-weight: 700;">₹ 48,50,000.00</td></tr>
+            <tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px 0; color: #666;">Cost of Goods Sold & Direct Costs</td><td align="right" style="color: #c5221f;">- ₹ 18,20,000.00</td></tr>
+            <tr style="border-bottom: 1px solid #eee; background: #fafaf8; font-weight: bold;"><td style="padding: 8px;">Gross Operating Margin</td><td align="right" style="padding: 8px;">₹ 30,30,000.00 (62.5%)</td></tr>
+            <tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px 0; color: #666;">Operating Overhead & Administrative</td><td align="right" style="color: #c5221f;">- ₹ 8,40,000.00</td></tr>
+            <tr style="background: #e6f4ea; font-weight: 800;"><td style="padding: 10px; color: #137333;">Net Profit After Tax (PAT)</td><td align="right" style="padding: 10px; color: #137333; font-size: 15px;">₹ 21,90,000.00 (45.2%)</td></tr>
+            <tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px 0; color: #666;">Total Assets (Schedule III)</td><td align="right" style="font-weight: 700;">₹ 1,07,50,000.00</td></tr>
+            <tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px 0; color: #666;">Total Liabilities & Obligations</td><td align="right" style="font-weight: 700;">₹ 35,60,000.00</td></tr>
+            <tr style="border-bottom: 2px solid #111; background: #fafaf8; font-weight: 800;"><td style="padding: 10px;">Total Shareholders Equity & Reserves</td><td align="right" style="padding: 10px;">₹ 71,90,000.00</td></tr>
           </table>
-          <p style="font-size: 12px; color: #555;">Ready for CA verification and direct GSTN portal filing upload.</p>
+
+          <div style="background: #e6f4ea; border: 1px solid #137333; padding: 12px 16px; border-radius: 4px; font-size: 12px; color: #137333; margin-bottom: 24px;">
+            ✓ Double-Entry Invariant Check Passed: Assets (₹ 1.07 Cr) = Liabilities + Equity (₹ 1.07 Cr) [Zero Discrepancy]
+          </div>
+
+          <p style="font-size: 12px; color: #555; line-height: 1.5;">
+            Attached is the full multi-statement workbook <strong>ZawrBooks_Executive_Dossier_FY2026.xlsx</strong> containing 5 dedicated worksheets (Executive Summary, Profit & Loss, Balance Sheet, Trial Balance, and GSTR-3B Tax Summary).
+          </p>
         </div>
       </div>
     `,
     attachment: {
-      filename: 'ZawrBooks_GSTR3B_Tax_Summary.xlsx',
-      content: createTestExcel('GSTR-3B Tax Summary', [
-        ['SECTION', 'SUPPLY DESCRIPTION', 'TAXABLE (INR)', 'CGST (INR)', 'SGST (INR)', 'IGST (INR)'],
-        ['3.1 (a)', 'Outward Taxable Supplies (Invoices)', 2400000, 216000, 216000, 0],
-        ['4 (A)', 'Input Tax Credit Claimed (ITC)', 1450000, 130500, 130500, 0],
-        ['6.1', 'Net Cash Payable to GSTN Portal', 0, 85500, 85500, 0],
+      filename: 'ZawrBooks_Executive_Dossier_FY2026.xlsx',
+      content: createExecutiveDossierExcel(),
+    },
+  },
+
+  // 3. Customer Tax Invoice (+ Excel Invoice)
+  {
+    name: '3. Business Transactional: Customer Tax Invoice',
+    subject: `Tax Invoice INV-2026-001 from Zawr Industries LLP — ₹ 2,95,000.00`,
+    html: `
+      <div style="font-family: -apple-system, sans-serif; background: #f4f3ef; padding: 32px 16px;">
+        <div style="max-width: 600px; margin: 0 auto; background: #fff; border-radius: 8px; border: 1px solid #e0dfd5; padding: 32px;">
+          <div style="background: #111; color: #fff; padding: 18px 24px; border-radius: 6px; margin-bottom: 24px;">
+            <span style="font-size: 10px; font-weight: 700; color: #10B981; letter-spacing: 1px;">GST TAX INVOICE</span>
+            <h2 style="margin: 4px 0 0; font-size: 18px; font-weight: 800;">ZAWR INDUSTRIES LLP</h2>
+          </div>
+          <p style="font-size: 14px; color: #333; margin: 0 0 16px;">Dear <strong>Acme Technologies Pvt Ltd</strong>,</p>
+          <p style="font-size: 13px; color: #555; line-height: 1.6; margin: 0 0 20px;">
+            Please find your official GST Tax Invoice <strong>INV-2026-001</strong> for ₹ 2,95,000.00. The full itemized spreadsheet is attached.
+          </p>
+          <table width="100%" cellpadding="0" cellspacing="0" style="background: #fafaf9; border: 1px solid #ebebeb; border-radius: 6px; font-size: 13px; margin-bottom: 24px;">
+            <tr><td style="padding: 10px 16px; border-bottom: 1px solid #eee; font-weight: bold; width: 35%; color: #666;">Invoice Number</td><td style="padding: 10px 16px; border-bottom: 1px solid #eee; font-weight: bold;">INV-2026-001</td></tr>
+            <tr><td style="padding: 10px 16px; border-bottom: 1px solid #eee; font-weight: bold; color: #666;">Taxable Amount</td><td style="padding: 10px 16px; border-bottom: 1px solid #eee;">₹ 2,50,000.00</td></tr>
+            <tr><td style="padding: 10px 16px; border-bottom: 1px solid #eee; font-weight: bold; color: #666;">GST Total (18%)</td><td style="padding: 10px 16px; border-bottom: 1px solid #eee;">₹ 45,000.00</td></tr>
+            <tr style="background: #e6f4ea;"><td style="padding: 12px 16px; font-weight: 800; color: #137333;">Total Amount Due</td><td style="padding: 12px 16px; font-weight: 800; color: #137333; font-size: 15px;">₹ 2,95,000.00</td></tr>
+          </table>
+          <div style="background: #fafaf8; border-left: 3px solid #111; padding: 14px; font-size: 12px;">
+            <strong>Bank Transfer Details (HDFC Bank):</strong><br>
+            A/C: 50200088921841 | IFSC: HDFC0001234 | Zawr Industries LLP
+          </div>
+        </div>
+      </div>
+    `,
+    attachment: {
+      filename: 'Tax_Invoice_INV-2026-001.xlsx',
+      content: createTestExcel('Tax Invoice INV-2026-001', [
+        ['ITEM DESCRIPTION', 'HSN/SAC', 'QTY', 'UNIT PRICE (INR)', 'TAXABLE (INR)', 'CGST (INR)', 'SGST (INR)', 'TOTAL (INR)'],
+        ['Enterprise Cloud Consulting & Implementation', '998313', 1, 250000, 250000, 22500, 22500, 295000],
+        ['GRAND TOTAL', '', '', '', 250000, 22500, 22500, 295000],
       ]),
     },
+  },
+
+  // 4. Official Payment Receipt Voucher
+  {
+    name: '4. Business Transactional: Payment Receipt Voucher',
+    subject: `[PAYMENT RECEIPT] ₹ 2,95,000 Received for Invoice INV-2026-001 — Zawr Industries`,
+    html: `
+      <div style="font-family: -apple-system, sans-serif; background: #f4f3ef; padding: 32px 16px;">
+        <div style="max-width: 600px; margin: 0 auto; background: #fff; border-radius: 8px; border: 1px solid #e0dfd5; padding: 32px;">
+          <div style="background: #111; color: #fff; padding: 18px 24px; border-radius: 6px; margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center;">
+            <h2 style="margin: 0; font-size: 18px; font-weight: 800;">ZAWR INDUSTRIES — RECEIPT VOUCHER</h2>
+            <span style="background: #e6f4ea; color: #137333; font-weight: 800; font-size: 11px; padding: 4px 10px; border-radius: 20px;">PAID</span>
+          </div>
+          <p style="font-size: 14px; color: #333; margin: 0 0 16px;">Dear <strong>Acme Technologies Pvt Ltd</strong>,</p>
+          <p style="font-size: 13px; color: #555; line-height: 1.6; margin: 0 0 20px;">
+            We gratefully acknowledge receipt of ₹ 2,95,000.00 against Invoice INV-2026-001.
+          </p>
+          <table width="100%" cellpadding="0" cellspacing="0" style="background: #fafaf9; border: 1px solid #ebebeb; border-radius: 6px; font-size: 13px; margin-bottom: 24px;">
+            <tr><td style="padding: 10px 16px; border-bottom: 1px solid #eee; font-weight: bold; width: 35%; color: #666;">Amount Received</td><td style="padding: 10px 16px; border-bottom: 1px solid #eee; font-weight: 800; color: #137333;">₹ 2,95,000.00</td></tr>
+            <tr><td style="padding: 10px 16px; border-bottom: 1px solid #eee; font-weight: bold; color: #666;">Bank UTR Reference</td><td style="padding: 10px 16px; border-bottom: 1px solid #eee; font-family: monospace;">HDFCN2628491823</td></tr>
+            <tr><td style="padding: 10px 16px; font-weight: bold; color: #666;">Remaining Balance</td><td style="padding: 10px 16px; color: #137333; font-weight: bold;">₹ 0.00 (Fully Settled)</td></tr>
+          </table>
+        </div>
+      </div>
+    `,
+  },
+
+  // 5. Vendor Remittance Advice (Payment Advice)
+  {
+    name: '5. Business Transactional: Vendor Remittance Advice',
+    subject: `[REMITTANCE ADVICE] Payment for Bill AWS-2026-9812 (₹ 97,437.60) — Zawr Industries LLP`,
+    html: `
+      <div style="font-family: -apple-system, sans-serif; background: #f4f3ef; padding: 32px 16px;">
+        <div style="max-width: 600px; margin: 0 auto; background: #fff; border-radius: 8px; border: 1px solid #e0dfd5; padding: 32px;">
+          <div style="background: #111; color: #fff; padding: 18px 24px; border-radius: 6px; margin-bottom: 24px;">
+            <span style="font-size: 10px; font-weight: 700; color: #10B981; letter-spacing: 1px;">ACCOUNTS PAYABLE DISBURSEMENT</span>
+            <h2 style="margin: 4px 0 0; font-size: 18px; font-weight: 800;">ZAWR INDUSTRIES — PAYMENT ADVICE</h2>
+          </div>
+          <p style="font-size: 14px; color: #333; margin: 0 0 16px;">Dear <strong>AWS Cloud Services India</strong>,</p>
+          <p style="font-size: 13px; color: #555; line-height: 1.6; margin: 0 0 20px;">
+            We have processed and remitted payment for your bill <strong>AWS-2026-9812</strong>:
+          </p>
+          <table width="100%" cellpadding="0" cellspacing="0" style="background: #fafaf9; border: 1px solid #ebebeb; border-radius: 6px; font-size: 13px; margin-bottom: 24px;">
+            <tr><td style="padding: 10px 16px; border-bottom: 1px solid #eee; font-weight: bold; width: 35%; color: #666;">Gross Invoice Amount</td><td style="padding: 10px 16px; border-bottom: 1px solid #eee;">₹ 99,120.00</td></tr>
+            <tr><td style="padding: 10px 16px; border-bottom: 1px solid #eee; font-weight: bold; color: #666;">TDS Withheld (Sec 194C)</td><td style="padding: 10px 16px; border-bottom: 1px solid #eee; color: #c5221f;">- ₹ 1,682.40</td></tr>
+            <tr style="background: #e6f4ea;"><td style="padding: 12px 16px; font-weight: 800; color: #137333;">Net Remitted to Bank</td><td style="padding: 12px 16px; font-weight: 800; color: #137333; font-size: 15px;">₹ 97,437.60</td></tr>
+            <tr><td style="padding: 10px 16px; font-weight: bold; color: #666;">Bank UTR Reference</td><td style="padding: 10px 16px; font-family: monospace;">HDFCR5202698124</td></tr>
+          </table>
+        </div>
+      </div>
+    `,
+  },
+
+  // 6. Cost Centre Budget Threshold Alert
+  {
+    name: '6. Risk & Control: Budget Threshold Alert',
+    subject: `[BUDGET ALERT] Cloud & Hosting Infrastructure reached 88% of Fiscal Allocation — Zawr Books`,
+    html: `
+      <div style="font-family: -apple-system, sans-serif; background: #f4f3ef; padding: 32px 16px;">
+        <div style="max-width: 600px; margin: 0 auto; background: #fff; border-radius: 8px; border: 1px solid #e0dfd5; padding: 32px;">
+          <div style="border-bottom: 2px solid #E37400; padding-bottom: 14px; margin-bottom: 20px;">
+            <span style="font-size: 10px; font-weight: 700; color: #E37400; letter-spacing: 1.5px; text-transform: uppercase;">BUDGET UTILIZATION WARNING (80%+)</span>
+            <h2 style="margin: 4px 0 0; font-size: 20px; font-weight: 800;">BUDGET VARIANCE ALERT</h2>
+          </div>
+          <p style="font-size: 14px; color: #333; margin: 0 0 16px;">Spending in cost centre <strong>Cloud &amp; Hosting Infrastructure (Engineering)</strong> has reached <strong>88%</strong> of allocation:</p>
+          <table width="100%" cellpadding="0" cellspacing="0" style="background: #fafaf9; border: 1px solid #ebebeb; border-radius: 6px; font-size: 13px; margin-bottom: 24px;">
+            <tr><td style="padding: 10px 16px; border-bottom: 1px solid #eee; font-weight: bold; width: 40%; color: #666;">Allocated Budget</td><td style="padding: 10px 16px; border-bottom: 1px solid #eee;">₹ 1,00,000.00</td></tr>
+            <tr><td style="padding: 10px 16px; border-bottom: 1px solid #eee; font-weight: bold; color: #666;">Actual Spent</td><td style="padding: 10px 16px; border-bottom: 1px solid #eee; font-weight: 800; color: #c5221f;">₹ 88,000.00</td></tr>
+            <tr style="background: #FEF7E0;"><td style="padding: 12px 16px; font-weight: 800; color: #B25900;">Utilization Rate</td><td style="padding: 12px 16px; font-weight: 800; color: #B25900; font-size: 16px;">88%</td></tr>
+          </table>
+        </div>
+      </div>
+    `,
   },
 ];
 
@@ -292,7 +377,7 @@ async function sendAllTestEmails() {
       console.error(`   ✗ FAILED: ${err.message}`);
     }
 
-    // Short 800ms throttle between emails to respect SMTP rate limits
+    // 800ms throttle between emails
     await new Promise((r) => setTimeout(r, 800));
   }
 

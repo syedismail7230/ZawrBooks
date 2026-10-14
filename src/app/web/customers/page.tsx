@@ -7,7 +7,7 @@ import { Button } from '@/components/common/Button';
 import { CurrencyDisplay } from '@/components/common/CurrencyDisplay';
 import { globalDataStore } from '@/lib/store/dataStore';
 import { Customer } from '@/types';
-import { Users, Plus, FileText, Search } from 'lucide-react';
+import { Users, Plus, FileText, Search, Mail, Send, CheckCircle2 } from 'lucide-react';
 
 import { Modal } from '@/components/common/Modal';
 import { rupeesToPaise } from '@/lib/accounting/engine';
@@ -17,6 +17,8 @@ export default function CustomersPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [emailingCustomerId, setEmailingCustomerId] = useState<string | null>(null);
+  const [emailStatus, setEmailStatus] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   // Customer Form
   const [name, setName] = useState('');
@@ -62,6 +64,38 @@ export default function CustomersPage() {
     setIsCreateOpen(false);
   };
 
+  const handleEmailCustomerStatement = async (cust: Customer) => {
+    setEmailingCustomerId(cust.id);
+    setEmailStatus(null);
+    try {
+      const custInvoices = storeState.invoices.filter((i) => i.customerId === cust.id);
+      const res = await fetch('/api/email/business', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'CUSTOMER_STATEMENT',
+          payload: {
+            customer: cust,
+            invoices: custInvoices,
+          },
+        }),
+      });
+      const data = await res.json();
+      setEmailingCustomerId(null);
+      if (data.success) {
+        setEmailStatus({
+          type: 'success',
+          text: `Statement of Account with attached Excel spreadsheet dispatched to ${cust.email || 'admin@zawrindustries.com'} & admin@zawrindustries.com.`,
+        });
+      } else {
+        setEmailStatus({ type: 'error', text: data.error || 'Failed to dispatch statement' });
+      }
+    } catch (err: any) {
+      setEmailingCustomerId(null);
+      setEmailStatus({ type: 'error', text: err.message });
+    }
+  };
+
   const filtered = storeState.customers.filter((c) => {
     const q = searchQuery.toLowerCase();
     return c.name.toLowerCase().includes(q) || c.gstin.toLowerCase().includes(q);
@@ -83,6 +117,24 @@ export default function CustomersPage() {
           <Plus size={13} /> Add Customer
         </Button>
       </div>
+
+      {emailStatus && (
+        <div
+          className={`p-3 border text-xs font-medium flex items-center justify-between ${
+            emailStatus.type === 'error'
+              ? 'bg-[#FCE8E6] text-[#C5221F] border-[#FAD2CF]'
+              : 'bg-[#E6F4EA] text-[#137333] border-[#CEEAD6]'
+          }`}
+        >
+          <div className="flex items-center gap-2">
+            <CheckCircle2 size={15} />
+            <span>{emailStatus.text}</span>
+          </div>
+          <button onClick={() => setEmailStatus(null)} className="font-bold text-xs">
+            ✕
+          </button>
+        </div>
+      )}
 
       <Card noPadding>
         <div className="p-3 border-b border-[#E5E5E5] flex items-center justify-between bg-white">
@@ -142,13 +194,25 @@ export default function CustomersPage() {
                       <CurrencyDisplay paise={cust.outstandingBalancePaise} />
                     </td>
                     <td className="p-3 text-right">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setSelectedCustomer(cust)}
-                      >
-                        <FileText size={12} /> Statement
-                      </Button>
+                      <div className="flex items-center justify-end gap-1.5">
+                        <button
+                          title="Email Subledger Statement & Excel to Customer"
+                          disabled={emailingCustomerId === cust.id}
+                          onClick={() => handleEmailCustomerStatement(cust)}
+                          className="px-2 py-1 bg-white border border-[#CCCCCC] hover:border-black text-[11px] font-medium flex items-center gap-1 text-[#111111] transition-colors disabled:opacity-50"
+                        >
+                          <Mail size={12} />
+                          {emailingCustomerId === cust.id ? 'Sending...' : 'Email'}
+                        </button>
+
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setSelectedCustomer(cust)}
+                        >
+                          <FileText size={12} /> View
+                        </Button>
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -177,8 +241,13 @@ export default function CustomersPage() {
               <Button variant="outline" size="sm" onClick={() => setSelectedCustomer(null)}>
                 Close
               </Button>
-              <Button variant="primary" size="sm" onClick={() => alert(`Downloaded statement for ${selectedCustomer.name}`)}>
-                Download Statement (PDF)
+              <Button
+                variant="primary"
+                size="sm"
+                disabled={emailingCustomerId === selectedCustomer.id}
+                onClick={() => handleEmailCustomerStatement(selectedCustomer)}
+              >
+                <Mail size={12} /> {emailingCustomerId === selectedCustomer.id ? 'Dispatching...' : 'Email Statement to Customer'}
               </Button>
             </div>
           </div>

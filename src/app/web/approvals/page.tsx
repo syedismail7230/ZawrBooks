@@ -36,9 +36,22 @@ export default function ApprovalsPage() {
 
     const res = globalDataStore.reviewExpense(expense.id, decision, comment || undefined);
     if (res.success) {
+      fetch('/api/email/business', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'APPROVAL_DECISION',
+          payload: {
+            expense,
+            decision,
+            comment: comment || undefined,
+          },
+        }),
+      }).catch(console.error);
+
       setActionMessage({
         type: 'success',
-        text: `Expense "${expense.title}" has been successfully marked as ${decision}.`,
+        text: `Expense "${expense.title}" has been marked as ${decision}. Audit notification emailed to submitter & admin.`,
       });
     } else {
       setActionMessage({

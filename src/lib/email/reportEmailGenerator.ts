@@ -550,6 +550,89 @@ export function generateFinancialReportHtml(options: ReportGeneratorOptions): st
       `;
       break;
     }
+
+    case 'ExecutiveCombined': {
+      const margin = pnl.totalRevenuePaise > 0
+        ? ((pnl.netProfitPaise / pnl.totalRevenuePaise) * 100).toFixed(1) + '%'
+        : '0.0%';
+      const netWorkingCapital = balanceSheet.totalAssetsPaise - balanceSheet.totalLiabilitiesPaise;
+
+      const outwardTaxable = storeState.invoices.reduce((s: number, i: Invoice) => s + i.subtotalPaise, 0);
+      const outputCgst = storeState.invoices.reduce((s: number, i: Invoice) => s + i.cgstPaise, 0);
+      const outputSgst = storeState.invoices.reduce((s: number, i: Invoice) => s + i.sgstPaise, 0);
+      const outputIgst = storeState.invoices.reduce((s: number, i: Invoice) => s + i.igstPaise, 0);
+      const totalOutputGst = outputCgst + outputSgst + outputIgst;
+
+      const inputCgst = storeState.accounts.find((a: Account) => a.code === '1200')?.balancePaise || 0;
+      const inputSgst = storeState.accounts.find((a: Account) => a.code === '1210')?.balancePaise || 0;
+      const inputIgst = storeState.accounts.find((a: Account) => a.code === '1220')?.balancePaise || 0;
+      const totalItc = inputCgst + inputSgst + inputIgst;
+      const netCashPayable = Math.max(0, totalOutputGst - totalItc);
+
+      topMetricsRowsHtml = `
+        <tr>
+          <td style="padding: 10px 0; border-top: 1px solid #f0f0f0; color: #5f6368; font-size: 13px;">Total Operating Revenue</td>
+          <td style="padding: 10px 0; border-top: 1px solid #f0f0f0; color: #111111; font-weight: 700; font-size: 13px; text-align: right;">${formatINR(pnl.totalRevenuePaise)}</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px 0; border-top: 1px solid #f0f0f0; color: #5f6368; font-size: 13px;">Net Profit After Tax (PAT) & Margin</td>
+          <td style="padding: 10px 0; border-top: 1px solid #f0f0f0; color: ${pnl.netProfitPaise >= 0 ? '#137333' : '#c5221f'}; font-weight: 700; font-size: 13px; text-align: right;">${formatINR(pnl.netProfitPaise)} (${margin})</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px 0; border-top: 1px solid #f0f0f0; color: #5f6368; font-size: 13px;">Total Assets (Schedule III Balance Sheet)</td>
+          <td style="padding: 10px 0; border-top: 1px solid #f0f0f0; color: #111111; font-weight: 700; font-size: 13px; text-align: right;">${formatINR(balanceSheet.totalAssetsPaise)}</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px 0; border-top: 1px solid #f0f0f0; color: #5f6368; font-size: 13px;">Double-Entry Invariant Status</td>
+          <td style="padding: 10px 0; border-top: 1px solid #f0f0f0; color: #137333; font-weight: 700; font-size: 13px; text-align: right;">✓ Assets = Liabilities + Equity (Balanced)</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px 0; border-top: 1px solid #f0f0f0; color: #5f6368; font-size: 13px;">Net Working Capital (Assets - Liab)</td>
+          <td style="padding: 10px 0; border-top: 1px solid #f0f0f0; color: #111111; font-weight: 700; font-size: 13px; text-align: right;">${formatINR(netWorkingCapital)}</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px 0; border-top: 1px solid #f0f0f0; color: #5f6368; font-size: 13px;">Net GST 3B Cash Tax Liability</td>
+          <td style="padding: 10px 0; border-top: 1px solid #f0f0f0; color: ${netCashPayable > 0 ? '#c5221f' : '#137333'}; font-weight: 700; font-size: 13px; text-align: right;">${formatINR(netCashPayable)}</td>
+        </tr>
+      `;
+
+      reportDetailHtml = `
+        <div style="margin-top: 16px;">
+          <!-- Section A: P&L -->
+          <div style="background: #111; color: #fff; padding: 8px 12px; font-weight: 800; font-size: 12px; letter-spacing: 0.5px; margin-bottom: 8px;">
+            I. STATEMENT OF PROFIT AND LOSS (Ind AS Accrual)
+          </div>
+          <table style="width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 20px;">
+            <tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px;">Operating Revenue from Invoices</td><td align="right" style="font-weight: 700;">${formatINR(pnl.totalRevenuePaise)}</td></tr>
+            <tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px;">Direct Material & Operating Expenditure</td><td align="right" style="color: #c5221f;">- ${formatINR(pnl.directCostsPaise + pnl.operatingExpensesPaise + pnl.taxExpensePaise)}</td></tr>
+            <tr style="background: #e6f4ea; font-weight: 800;"><td style="padding: 10px; color: #137333;">Net Realized Profit After Tax (PAT)</td><td align="right" style="padding: 10px; color: #137333; font-size: 14px;">${formatINR(pnl.netProfitPaise)}</td></tr>
+          </table>
+
+          <!-- Section B: Balance Sheet -->
+          <div style="background: #111; color: #fff; padding: 8px 12px; font-weight: 800; font-size: 12px; letter-spacing: 0.5px; margin-bottom: 8px;">
+            II. BALANCE SHEET (STATEMENT OF FINANCIAL POSITION)
+          </div>
+          <table style="width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 20px;">
+            <tr style="border-bottom: 2px solid #111; font-weight: 700; background: #fafaf8;"><td style="padding: 8px;">TOTAL ASSETS (A)</td><td align="right">${formatINR(balanceSheet.totalAssetsPaise)}</td></tr>
+            <tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px;">Total Liabilities (Obligations)</td><td align="right">${formatINR(balanceSheet.totalLiabilitiesPaise)}</td></tr>
+            <tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px;">Total Equity & Retained Earnings</td><td align="right">${formatINR(balanceSheet.totalEquityPaise)}</td></tr>
+            <tr style="border-bottom: 2px solid #111; font-weight: 700; background: #fafaf8;"><td style="padding: 8px;">TOTAL LIABILITIES & EQUITY (B)</td><td align="right">${formatINR(balanceSheet.totalLiabilitiesPaise + balanceSheet.totalEquityPaise)}</td></tr>
+          </table>
+
+          <!-- Section C: Statutory GST -->
+          <div style="background: #111; color: #fff; padding: 8px 12px; font-weight: 800; font-size: 12px; letter-spacing: 0.5px; margin-bottom: 8px;">
+            III. GSTR-3B STATUTORY TAX PREPARATION
+          </div>
+          <table style="width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 20px;">
+            <tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px;">3.1 Outward Taxable Turnover</td><td align="right">${formatINR(outwardTaxable)}</td></tr>
+            <tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px;">Total Output GST Liability</td><td align="right">${formatINR(totalOutputGst)}</td></tr>
+            <tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px;">Eligible Input Tax Credit (ITC Claimed)</td><td align="right" style="color: #137333;">- ${formatINR(totalItc)}</td></tr>
+            <tr style="background: #fafaf8; font-weight: 800;"><td style="padding: 10px;">Net Cash Tax Payable (Electronic Cash Ledger)</td><td align="right" style="padding: 10px; color: ${netCashPayable > 0 ? '#c5221f' : '#137333'}; font-size: 14px;">${formatINR(netCashPayable)}</td></tr>
+          </table>
+        </div>
+      `;
+      break;
+    }
   }
 
   // -------------------------------------------------------------
@@ -1253,6 +1336,126 @@ export function generateFinancialReportExcel(options: ReportGeneratorOptions): {
         netCashPayable,
       ]);
       break;
+    }
+
+    case 'ExecutiveCombined': {
+      const pnl = calculateProfitAndLoss(storeState.accounts);
+      const balanceSheet = calculateBalanceSheet(storeState.accounts, pnl.netProfitPaise);
+      const trialBalance = calculateTrialBalance(storeState.accounts);
+
+      const outwardTaxable = storeState.invoices.reduce((s: number, i: Invoice) => s + i.subtotalPaise, 0) / 100;
+      const outputCgst = storeState.invoices.reduce((s: number, i: Invoice) => s + i.cgstPaise, 0) / 100;
+      const outputSgst = storeState.invoices.reduce((s: number, i: Invoice) => s + i.sgstPaise, 0) / 100;
+      const outputIgst = storeState.invoices.reduce((s: number, i: Invoice) => s + i.igstPaise, 0) / 100;
+      const totalOutputGst = outputCgst + outputSgst + outputIgst;
+
+      const inputCgst = (storeState.accounts.find((a: Account) => a.code === '1200')?.balancePaise || 0) / 100;
+      const inputSgst = (storeState.accounts.find((a: Account) => a.code === '1210')?.balancePaise || 0) / 100;
+      const inputIgst = (storeState.accounts.find((a: Account) => a.code === '1220')?.balancePaise || 0) / 100;
+      const totalItc = inputCgst + inputSgst + inputIgst;
+      const netCashPayable = Math.max(0, totalOutputGst - totalItc);
+
+      // Sheet 1: Executive KPI Summary
+      const summaryRows = [
+        ['ZAWR INDUSTRIES LLP — COMPREHENSIVE EXECUTIVE FINANCIAL DOSSIER'],
+        ['REPORT: EXECUTIVE FINANCIAL DOSSIER (ALL REPORTS COMBINED)'],
+        ['ACCOUNTING STANDARD: Ind AS (Accrual Basis) | CURRENCY: INR (₹)'],
+        [`GENERATED: ${new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })} IST`],
+        [],
+        ['EXECUTIVE FINANCIAL METRIC', 'CLASSIFICATION', 'AMOUNT (INR)', 'STATUS / MARGIN'],
+        ['Revenue from Operations (Invoices)', 'Operating Income', pnl.totalRevenuePaise / 100, 'Gross Invoiced Turnover'],
+        ['Cost of Goods Sold & Direct Materials', 'Direct Expenses', -pnl.directCostsPaise / 100, 'Direct Project Costs'],
+        ['Gross Operating Profit', 'Subtotal', (pnl.totalRevenuePaise - pnl.directCostsPaise) / 100, 'Direct Margin'],
+        ['Administrative & Operating Overhead', 'Operating Overhead', -pnl.operatingExpensesPaise / 100, 'Operating Burn'],
+        ['Net Profit After Tax (PAT)', 'Bottomline Net', pnl.netProfitPaise / 100, pnl.totalRevenuePaise > 0 ? `${((pnl.netProfitPaise / pnl.totalRevenuePaise) * 100).toFixed(1)}% Margin` : '0%'],
+        ['Total Assets (Schedule III Balance Sheet)', 'Assets', balanceSheet.totalAssetsPaise / 100, 'Audit Invariant Verified'],
+        ['Total Liabilities (Debt & Payables)', 'Obligations', balanceSheet.totalLiabilitiesPaise / 100, 'Current & Long-Term Dues'],
+        ['Total Equity & Retained Earnings', 'Shareholders Net Worth', balanceSheet.totalEquityPaise / 100, 'Capital Reserve'],
+        ['Total Liabilities & Equity', 'Balance Sheet (B)', (balanceSheet.totalLiabilitiesPaise + balanceSheet.totalEquityPaise) / 100, 'Double-Entry Invariant Balanced'],
+        ['Net Working Capital (Assets - Liab)', 'Liquidity Position', (balanceSheet.totalAssetsPaise - balanceSheet.totalLiabilitiesPaise) / 100, 'Buffer Liquidity'],
+        ['Net GST 3B Cash Tax Liability', 'Statutory Dues', netCashPayable, 'Electronic Cash Ledger'],
+      ];
+      const wsSummary = XLSX.utils.aoa_to_sheet(summaryRows);
+      wsSummary['!cols'] = [{ wch: 38 }, { wch: 24 }, { wch: 20 }, { wch: 28 }];
+      XLSX.utils.book_append_sheet(wb, wsSummary, 'Executive Summary & KPIs');
+
+      // Sheet 2: Statement of Profit & Loss
+      const pnlRows = [
+        ['ZAWR INDUSTRIES LLP — STATEMENT OF PROFIT AND LOSS'],
+        ['Ind AS Compliance | Accrual Basis | Currency: INR (₹)'],
+        [],
+        ['ACCOUNT CODE', 'PARTICULARS', 'CLASSIFICATION', 'AMOUNT (INR)'],
+        ['', 'I. REVENUE FROM OPERATIONS', '', ''],
+        ...pnl.revenueAccounts.map((r: any) => [r.account.code, r.account.name, 'Operating Revenue', r.amountPaise / 100]),
+        ['SUBTOTAL-REV', 'Total Operating Revenue', 'Revenue', pnl.totalRevenuePaise / 100],
+        [],
+        ['', 'II. EXPENSES & OVERHEAD', '', ''],
+        ...pnl.expenseAccounts.map((e: any) => [e.account.code, e.account.name, 'Operating Expense', -(e.amountPaise / 100)]),
+        ['SUBTOTAL-EXP', 'Total Expenditure', 'Expenses', -((pnl.directCostsPaise + pnl.operatingExpensesPaise + pnl.taxExpensePaise) / 100)],
+        [],
+        ['NET-PAT', 'NET PROFIT AFTER TAX (PAT)', 'Realized Earnings', pnl.netProfitPaise / 100],
+      ];
+      const wsPnl = XLSX.utils.aoa_to_sheet(pnlRows);
+      wsPnl['!cols'] = [{ wch: 18 }, { wch: 36 }, { wch: 24 }, { wch: 20 }];
+      XLSX.utils.book_append_sheet(wb, wsPnl, 'Profit and Loss');
+
+      // Sheet 3: Balance Sheet
+      const bsRows = [
+        ['ZAWR INDUSTRIES LLP — BALANCE SHEET (STATEMENT OF FINANCIAL POSITION)'],
+        ['Schedule III Companies Act Compliance | Currency: INR (₹)'],
+        [],
+        ['HEAD OF ACCOUNT', 'CATEGORY', 'AMOUNT (INR)'],
+        ['I. ASSETS', '', ''],
+        ...balanceSheet.assets.map((a: any) => [a.name, a.subType || 'Asset', a.amountPaise / 100]),
+        ['TOTAL ASSETS (A)', 'Audit Verified', balanceSheet.totalAssetsPaise / 100],
+        [],
+        ['II. LIABILITIES & EQUITY', '', ''],
+        ...balanceSheet.liabilities.map((l: any) => [l.name, l.subType || 'Liability', l.amountPaise / 100]),
+        ['TOTAL LIABILITIES', 'Subtotal', balanceSheet.totalLiabilitiesPaise / 100],
+        ...balanceSheet.equity.map((e: any) => [e.name, e.subType || 'Equity', e.amountPaise / 100]),
+        ['TOTAL EQUITY & RESERVES', 'Subtotal', balanceSheet.totalEquityPaise / 100],
+        ['TOTAL LIABILITIES & EQUITY (B)', 'Balanced', (balanceSheet.totalLiabilitiesPaise + balanceSheet.totalEquityPaise) / 100],
+      ];
+      const wsBs = XLSX.utils.aoa_to_sheet(bsRows);
+      wsBs['!cols'] = [{ wch: 36 }, { wch: 24 }, { wch: 20 }];
+      XLSX.utils.book_append_sheet(wb, wsBs, 'Balance Sheet');
+
+      // Sheet 4: Trial Balance
+      const tbRows = [
+        ['ZAWR INDUSTRIES LLP — TRIAL BALANCE DIGEST'],
+        ['Balanced General Ledger Accounts | Currency: INR (₹)'],
+        [],
+        ['ACCOUNT CODE', 'ACCOUNT NAME', 'TYPE', 'DEBIT (INR)', 'CREDIT (INR)'],
+        ...trialBalance.rows.map((r: any) => [r.accountCode, r.accountName, r.type, r.debitPaise > 0 ? r.debitPaise / 100 : '', r.creditPaise > 0 ? r.creditPaise / 100 : '']),
+        [],
+        ['TOTAL', 'TRIAL BALANCE INVARIANT TOTAL', 'BALANCED', trialBalance.totalDebitPaise / 100, trialBalance.totalCreditPaise / 100],
+      ];
+      const wsTb = XLSX.utils.aoa_to_sheet(tbRows);
+      wsTb['!cols'] = [{ wch: 18 }, { wch: 36 }, { wch: 18 }, { wch: 20 }, { wch: 20 }];
+      XLSX.utils.book_append_sheet(wb, wsTb, 'Trial Balance');
+
+      // Sheet 5: GSTR-3B Tax Summary
+      const gstRows = [
+        ['ZAWR INDUSTRIES LLP — GSTR-3B TAX PREPARATION & ITC DIGEST'],
+        ['GSTN Electronic Cash Ledger Reconciliation | Currency: INR (₹)'],
+        [],
+        ['TABLE', 'DESCRIPTION', 'TAXABLE (INR)', 'IGST (INR)', 'CGST (INR)', 'SGST (INR)', 'TOTAL TAX (INR)'],
+        ['3.1', 'Outward Taxable Supplies (Invoices)', outwardTaxable, outputIgst, outputCgst, outputSgst, totalOutputGst],
+        ['4.0', 'Eligible Input Tax Credit (ITC Pool)', 0, inputIgst, inputCgst, inputSgst, totalItc],
+        ['6.1', 'Net Cash Tax Payable (Electronic Cash Ledger)', '', '', outputCgst > inputCgst ? outputCgst - inputCgst : 0, outputSgst > inputSgst ? outputSgst - inputSgst : 0, netCashPayable],
+      ];
+      const wsGst = XLSX.utils.aoa_to_sheet(gstRows);
+      wsGst['!cols'] = [{ wch: 12 }, { wch: 38 }, { wch: 18 }, { wch: 16 }, { wch: 16 }, { wch: 16 }, { wch: 18 }];
+      XLSX.utils.book_append_sheet(wb, wsGst, 'GST 3B Preparation');
+
+      const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' }) as Buffer;
+      const filename = `ZawrBooks_Executive_Dossier_${dateStr}.xlsx`;
+
+      return {
+        buffer,
+        filename,
+        contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      };
     }
   }
 

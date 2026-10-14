@@ -10,13 +10,16 @@ import { CurrencyDisplay } from '@/components/common/CurrencyDisplay';
 import { globalDataStore } from '@/lib/store/dataStore';
 import { formatDate } from '@/lib/utils';
 import { rupeesToPaise } from '@/lib/accounting/engine';
-import { Plus, Search, FileText } from 'lucide-react';
+import { Plus, Search, FileText, Mail, CheckCircle2 } from 'lucide-react';
+import { VendorBill } from '@/types';
 
 export default function VendorsPage() {
   const [storeState, setStoreState] = useState(globalDataStore.getState());
   const [searchQuery, setSearchQuery] = useState('');
   const [isAddVendorOpen, setIsAddVendorOpen] = useState(false);
   const [isAddBillOpen, setIsAddBillOpen] = useState(false);
+  const [emailingBillId, setEmailingBillId] = useState<string | null>(null);
+  const [emailAlert, setEmailAlert] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   // Vendor Form State
   const [vendorName, setVendorName] = useState('');
@@ -99,6 +102,42 @@ export default function VendorsPage() {
     setIsAddBillOpen(false);
   };
 
+  const handleEmailRemittance = async (bill: VendorBill) => {
+    setEmailingBillId(bill.id);
+    setEmailAlert(null);
+    try {
+      const vend = storeState.vendors.find((v) => v.id === bill.vendorId);
+      const res = await fetch('/api/email/business', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'VENDOR_REMITTANCE',
+          payload: {
+            bill,
+            vendor: vend,
+            paidAmountPaise: bill.totalPaise,
+            tdsDeductedPaise: Math.round(bill.subtotalPaise * 0.02),
+            utrReference: `HDFCR52026${bill.billNumber.replace(/[^0-9]/g, '') || '9821'}`,
+            paymentDate: new Date().toISOString(),
+          },
+        }),
+      });
+      const data = await res.json();
+      setEmailingBillId(null);
+      if (data.success) {
+        setEmailAlert({
+          type: 'success',
+          text: `Payment Remittance Advice for bill ${bill.billNumber} dispatched to ${vend?.email || 'admin@zawrindustries.com'} & admin@zawrindustries.com.`,
+        });
+      } else {
+        setEmailAlert({ type: 'error', text: data.error || 'Failed to dispatch remittance advice' });
+      }
+    } catch (err: any) {
+      setEmailingBillId(null);
+      setEmailAlert({ type: 'error', text: err.message });
+    }
+  };
+
   const filteredVendors = storeState.vendors.filter((v) => {
     const q = searchQuery.toLowerCase();
     return v.name.toLowerCase().includes(q) || v.gstin.toLowerCase().includes(q);
@@ -125,6 +164,24 @@ export default function VendorsPage() {
           </Button>
         </div>
       </div>
+
+      {emailAlert && (
+        <div
+          className={`p-3 border text-xs font-medium flex items-center justify-between ${
+            emailAlert.type === 'error'
+              ? 'bg-[#FCE8E6] text-[#C5221F] border-[#FAD2CF]'
+              : 'bg-[#E6F4EA] text-[#137333] border-[#CEEAD6]'
+          }`}
+        >
+          <div className="flex items-center gap-2">
+            <CheckCircle2 size={15} />
+            <span>{emailAlert.text}</span>
+          </div>
+          <button onClick={() => setEmailAlert(null)} className="font-bold text-xs">
+            ✕
+          </button>
+        </div>
+      )}
 
       {/* Vendor Master Records */}
       <Card title="Supplier & Vendor Master Directory" noPadding>
@@ -185,12 +242,13 @@ export default function VendorsPage() {
                 <th className="p-3 text-right">Tax</th>
                 <th className="p-3 text-right">Total Payable</th>
                 <th className="p-3 text-center">Status</th>
+                <th className="p-3 text-right">Actions</th>
               </tr>
             </thead>
             <tbody>
               {storeState.vendorBills.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="p-12 text-center text-xs text-[#777777]">
+                  <td colSpan={9} className="p-12 text-center text-xs text-[#777777]">
                     No purchase bills recorded yet. Click &quot;Add Vendor Bill&quot; to record incoming supplier invoices.
                   </td>
                 </tr>
@@ -216,6 +274,17 @@ export default function VendorsPage() {
                     </td>
                     <td className="p-3 text-center">
                       <Badge status={bill.status} />
+                    </td>
+                    <td className="p-3 text-right">
+                      <button
+                        title="Email Payment Advice / Remittance Voucher to Vendor"
+                        disabled={emailingBillId === bill.id}
+                        onClick={() => handleEmailRemittance(bill)}
+                        className="px-2 py-1 bg-white border border-[#CCCCCC] hover:border-black text-[11px] font-medium flex items-center gap-1 text-[#111111] transition-colors disabled:opacity-50 ml-auto"
+                      >
+                        <Mail size={12} />
+                        {emailingBillId === bill.id ? 'Sending...' : 'Payment Advice'}
+                      </button>
                     </td>
                   </tr>
                 ))

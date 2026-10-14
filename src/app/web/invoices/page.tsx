@@ -11,13 +11,15 @@ import { globalDataStore } from '@/lib/store/dataStore';
 import { Invoice } from '@/types';
 import { formatDate } from '@/lib/utils';
 import { rupeesToPaise } from '@/lib/accounting/engine';
-import { Plus, CreditCard, Search, FileText, CheckCircle } from 'lucide-react';
+import { Plus, CreditCard, Search, FileText, CheckCircle, Mail, Bell, Send, CheckCircle2 } from 'lucide-react';
 
 export default function InvoicesPage() {
   const [storeState, setStoreState] = useState(globalDataStore.getState());
   const [searchQuery, setSearchQuery] = useState('');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [selectedInvoiceForPayment, setSelectedInvoiceForPayment] = useState<Invoice | null>(null);
+  const [emailingId, setEmailingId] = useState<string | null>(null);
+  const [emailAlert, setEmailAlert] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   // New Invoice Form State
   const [customerId, setCustomerId] = useState('');
@@ -33,6 +35,7 @@ export default function InvoicesPage() {
   const [paymentAmountRupees, setPaymentAmountRupees] = useState('');
   const [bankAccountId, setBankAccountId] = useState('');
   const [utrReference, setUtrReference] = useState('');
+  const [sendReceiptEmail, setSendReceiptEmail] = useState(true);
 
   useEffect(() => {
     return globalDataStore.subscribe(() => {
@@ -116,18 +119,108 @@ export default function InvoicesPage() {
     setIsCreateOpen(false);
   };
 
-  const handleRecordPayment = () => {
+  const handleEmailInvoice = async (inv: Invoice) => {
+    setEmailingId(inv.id);
+    setEmailAlert(null);
+    try {
+      const cust = storeState.customers.find((c) => c.id === inv.customerId);
+      const res = await fetch('/api/email/business', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'INVOICE_SEND',
+          payload: {
+            invoice: inv,
+            customer: cust,
+            recipientEmail: cust?.email || 'admin@zawrindustries.com',
+          },
+        }),
+      });
+      const data = await res.json();
+      setEmailingId(null);
+      if (data.success) {
+        setEmailAlert({
+          type: 'success',
+          text: `Tax Invoice ${inv.invoiceNumber} successfully emailed with Excel attachment to ${cust?.email || 'admin@zawrindustries.com'} & admin@zawrindustries.com.`,
+        });
+      } else {
+        setEmailAlert({ type: 'error', text: data.error || 'Failed to dispatch email' });
+      }
+    } catch (err: any) {
+      setEmailingId(null);
+      setEmailAlert({ type: 'error', text: err.message });
+    }
+  };
+
+  const handleSendReminder = async (inv: Invoice) => {
+    setEmailingId(`remind-${inv.id}`);
+    setEmailAlert(null);
+    try {
+      const cust = storeState.customers.find((c) => c.id === inv.customerId);
+      const res = await fetch('/api/email/business', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'PAYMENT_REMINDER',
+          payload: {
+            invoice: inv,
+            customer: cust,
+          },
+        }),
+      });
+      const data = await res.json();
+      setEmailingId(null);
+      if (data.success) {
+        setEmailAlert({
+          type: 'success',
+          text: `Payment reminder for ${inv.invoiceNumber} dispatched to ${cust?.email || 'admin@zawrindustries.com'}.`,
+        });
+      } else {
+        setEmailAlert({ type: 'error', text: data.error || 'Failed to dispatch reminder' });
+      }
+    } catch (err: any) {
+      setEmailingId(null);
+      setEmailAlert({ type: 'error', text: err.message });
+    }
+  };
+
+  const handleRecordPayment = async () => {
     if (!selectedInvoiceForPayment) return;
     const amountPaise = rupeesToPaise(paymentAmountRupees);
+    const inv = selectedInvoiceForPayment;
 
     const res = globalDataStore.recordInvoicePayment(
-      selectedInvoiceForPayment.id,
+      inv.id,
       amountPaise,
       bankAccountId,
       utrReference
     );
 
     if (res.success) {
+      if (sendReceiptEmail) {
+        try {
+          const cust = storeState.customers.find((c) => c.id === inv.customerId);
+          const bank = storeState.bankAccounts.find((b) => b.id === bankAccountId);
+          fetch('/api/email/business', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              action: 'PAYMENT_RECEIPT',
+              payload: {
+                invoice: { ...inv, amountPaidPaise: inv.amountPaidPaise + amountPaise },
+                customer: cust,
+                amountReceivedPaise: amountPaise,
+                utrReference: utrReference || 'NEFT-AUTO',
+                bankName: bank ? `${bank.bankName} (${bank.accountName})` : 'HDFC Bank Limited',
+              },
+            }),
+          });
+          setEmailAlert({
+            type: 'success',
+            text: `Payment recorded and official Payment Receipt Voucher emailed to customer & admin.`,
+          });
+        } catch {}
+      }
       setSelectedInvoiceForPayment(null);
     } else {
       alert(res.error || 'Failed to record payment');
@@ -158,6 +251,24 @@ export default function InvoicesPage() {
           <Plus size={13} /> Create Tax Invoice
         </Button>
       </div>
+
+      {emailAlert && (
+        <div
+          className={`p-3 border text-xs font-medium flex items-center justify-between ${
+            emailAlert.type === 'error'
+              ? 'bg-[#FCE8E6] text-[#C5221F] border-[#FAD2CF]'
+              : 'bg-[#E6F4EA] text-[#137333] border-[#CEEAD6]'
+          }`}
+        >
+          <div className="flex items-center gap-2">
+            <CheckCircle2 size={15} />
+            <span>{emailAlert.text}</span>
+          </div>
+          <button onClick={() => setEmailAlert(null)} className="font-bold text-xs">
+            ✕
+          </button>
+        </div>
+      )}
 
       <Card noPadding>
         <div className="p-3 border-b border-[#E5E5E5] flex items-center justify-between bg-white">
@@ -234,18 +345,42 @@ export default function InvoicesPage() {
                     <Badge status={inv.status} />
                   </td>
                   <td className="p-3 text-right">
-                    {inv.status !== 'Paid' && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          setSelectedInvoiceForPayment(inv);
-                          setPaymentAmountRupees(((inv.totalPaise - inv.amountPaidPaise) / 100).toFixed(2));
-                        }}
+                    <div className="flex items-center justify-end gap-1.5">
+                      <button
+                        title="Email Tax Invoice & Excel Workbook to Customer"
+                        disabled={emailingId === inv.id}
+                        onClick={() => handleEmailInvoice(inv)}
+                        className="px-2 py-1 bg-white border border-[#CCCCCC] hover:border-black text-[11px] font-medium flex items-center gap-1 text-[#111111] transition-colors disabled:opacity-50"
                       >
-                        <CreditCard size={12} /> Record Receipt
-                      </Button>
-                    )}
+                        <Mail size={12} />
+                        {emailingId === inv.id ? 'Sending...' : 'Email'}
+                      </button>
+
+                      {inv.status !== 'Paid' && (
+                        <button
+                          title="Send Overdue / Due Payment Reminder"
+                          disabled={emailingId === `remind-${inv.id}`}
+                          onClick={() => handleSendReminder(inv)}
+                          className="px-2 py-1 bg-white border border-[#D2E3FC] text-[#1A73E8] hover:bg-[#E8F0FE] text-[11px] font-medium flex items-center gap-1 transition-colors disabled:opacity-50"
+                        >
+                          <Bell size={12} />
+                          {emailingId === `remind-${inv.id}` ? 'Sending...' : 'Remind'}
+                        </button>
+                      )}
+
+                      {inv.status !== 'Paid' && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedInvoiceForPayment(inv);
+                            setPaymentAmountRupees(((inv.totalPaise - inv.amountPaidPaise) / 100).toFixed(2));
+                          }}
+                        >
+                          <CreditCard size={12} /> Receipt
+                        </Button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               )))}
@@ -448,7 +583,20 @@ export default function InvoicesPage() {
                 value={utrReference}
                 onChange={(e) => setUtrReference(e.target.value)}
                 className="w-full bg-white border border-[#CCCCCC] p-2 text-xs font-mono outline-none focus:border-black"
+                placeholder="e.g. HDFCN2628491823"
               />
+            </div>
+
+            <div className="pt-2 border-t border-[#eee]">
+              <label className="flex items-center gap-2 text-xs text-[#333333] cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={sendReceiptEmail}
+                  onChange={(e) => setSendReceiptEmail(e.target.checked)}
+                  className="rounded border-[#CCCCCC]"
+                />
+                <span>Automatically dispatch official Payment Receipt Voucher to customer &amp; admin</span>
+              </label>
             </div>
 
             <div className="flex justify-end gap-2 pt-2">

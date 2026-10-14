@@ -36,6 +36,7 @@ export default function MobileDashboardPage() {
   const [selectedExpense, setSelectedExpense] = useState<ExpenseSubmission | null>(null);
 
   useEffect(() => {
+    globalDataStore.syncWithServer();
     return globalDataStore.subscribe(() => {
       setStoreState({ ...globalDataStore.getState() });
     });

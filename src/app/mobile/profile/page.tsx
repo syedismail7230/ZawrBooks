@@ -63,6 +63,7 @@ export default function MobileProfilePage() {
   };
 
   useEffect(() => {
+    globalDataStore.syncWithServer();
     const unsub = globalDataStore.subscribe(() => {
       setStoreState({ ...globalDataStore.getState() });
     });
@@ -147,7 +148,7 @@ export default function MobileProfilePage() {
                 <div className="text-[10px] text-[#777777] font-mono mt-0.5">
                   {storeState.organization?.gstin
                     ? `GSTIN: ${storeState.organization.gstin}`
-                    : 'GSTIN: 29AABCZ1234F1Z5 (Karnataka)'}
+                    : 'GSTIN: 29AADFZ6214A1ZC (Karnataka)'}
                 </div>
               </div>
             </div>

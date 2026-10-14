@@ -9,7 +9,7 @@ import { CurrencyDisplay } from '@/components/common/CurrencyDisplay';
 import { globalDataStore } from '@/lib/store/dataStore';
 import { ExpenseSubmission, VendorBill } from '@/types';
 import { formatDate } from '@/lib/utils';
-import { Check, X, RotateCcw, AlertCircle, ShieldAlert, FileText, Briefcase, CheckSquare } from 'lucide-react';
+import { Check, X, RotateCcw, AlertCircle, ShieldAlert, FileText, Briefcase, CheckSquare, RefreshCw } from 'lucide-react';
 
 export default function ApprovalsPage() {
   const [storeState, setStoreState] = useState(globalDataStore.getState());
@@ -17,6 +17,7 @@ export default function ApprovalsPage() {
   const [actionMessage, setActionMessage] = useState<{ type: 'error' | 'success'; text: string } | null>(null);
 
   useEffect(() => {
+    globalDataStore.syncWithServer();
     return globalDataStore.subscribe(() => {
       setStoreState({ ...globalDataStore.getState() });
     });
@@ -103,12 +104,26 @@ export default function ApprovalsPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2 text-xs bg-white border border-[#E5E5E5] px-3 py-1.5">
-          <ShieldAlert size={14} className="text-[#B25900]" />
-          <span className="text-[#666666]">Active Approver:</span>
-          <span className="font-bold text-[#111111]">
-            {storeState.currentUser?.fullName || 'Active Approver'} ({storeState.currentUser?.role?.replace('_', ' ') || 'Admin'})
-          </span>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              globalDataStore.syncWithServer();
+              setActionMessage({ type: 'success', text: 'Queue synchronized with server data.' });
+              setTimeout(() => setActionMessage(null), 2500);
+            }}
+          >
+            <RefreshCw size={13} /> Sync Queue
+          </Button>
+
+          <div className="flex items-center gap-2 text-xs bg-white border border-[#E5E5E5] px-3 py-1.5">
+            <ShieldAlert size={14} className="text-[#B25900]" />
+            <span className="text-[#666666]">Active Approver:</span>
+            <span className="font-bold text-[#111111]">
+              {storeState.currentUser?.fullName || 'Active Approver'} ({storeState.currentUser?.role?.replace('_', ' ') || 'Admin'})
+            </span>
+          </div>
         </div>
       </div>
 

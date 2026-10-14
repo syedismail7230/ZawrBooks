@@ -152,18 +152,20 @@ describe('ZawrBooks Comprehensive UT QA - OCR, Approvals & Organization Persiste
 
     it('QA-08: Updating organization persists to server and preserves data across sessions', () => {
       const updatedOrg = serverStore.saveOrganization({
-        name: 'Zawr Global Industries',
-        legalName: 'Zawr Global Industries Private Limited',
-        gstin: '29AABCZ9999F1Z9',
-        pan: 'AABCZ9999F',
+        name: 'ZAWR INDUSTRIES LLP',
+        legalName: 'ZAWR INDUSTRIES LLP',
+        gstin: '29AADFZ6214A1ZC',
+        pan: 'AADFZ6214A',
       });
 
-      expect(updatedOrg.name).toBe('Zawr Global Industries');
-      expect(updatedOrg.legalName).toBe('Zawr Global Industries Private Limited');
-      expect(updatedOrg.gstin).toBe('29AABCZ9999F1Z9');
+      expect(updatedOrg.name).toBe('ZAWR INDUSTRIES LLP');
+      expect(updatedOrg.legalName).toBe('ZAWR INDUSTRIES LLP');
+      expect(updatedOrg.gstin).toBe('29AADFZ6214A1ZC');
+      expect(updatedOrg.pan).toBe('AADFZ6214A');
 
       const retrieved = serverStore.getOrganization();
-      expect(retrieved.gstin).toBe('29AABCZ9999F1Z9');
+      expect(retrieved.gstin).toBe('29AADFZ6214A1ZC');
+      expect(retrieved.legalName).toBe('ZAWR INDUSTRIES LLP');
     });
   });
 

@@ -186,10 +186,22 @@ class DataStore {
           }
         }
 
+        // Auto-migrate if local storage contains stale dummy organization
+        let org = parsed.organization || defaultOrganization;
+        if (
+          !org ||
+          org.gstin === '29AABCZ9999F1Z9' ||
+          org.pan === 'AABCZ9999F' ||
+          org.name === 'Zawr Global Industries' ||
+          org.legalName === 'Zawr Global Industries Private Limited'
+        ) {
+          org = { ...defaultOrganization };
+        }
+
         this.state = {
           ...this.state,
           ...parsed,
-          organization: parsed.organization || defaultOrganization,
+          organization: org,
           accounts: (parsed.accounts && parsed.accounts.length > 0) ? parsed.accounts : [...defaultStandardAccounts],
           users: mergedUsers,
           currentUser: activeUser,
@@ -267,9 +279,18 @@ class DataStore {
             changed = true;
           }
 
-          if (s.organization && (!this.state.organization || s.organization.name !== this.state.organization.name)) {
-            this.state.organization = s.organization;
-            changed = true;
+          if (s.organization) {
+            const cur = this.state.organization;
+            if (
+              !cur ||
+              cur.name !== s.organization.name ||
+              cur.legalName !== s.organization.legalName ||
+              cur.gstin !== s.organization.gstin ||
+              cur.pan !== s.organization.pan
+            ) {
+              this.state.organization = s.organization;
+              changed = true;
+            }
           }
 
           if (changed) {

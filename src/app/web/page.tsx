@@ -25,6 +25,7 @@ export default function OverviewPage() {
   const [pan, setPan] = useState('');
 
   useEffect(() => {
+    globalDataStore.syncWithServer();
     return globalDataStore.subscribe(() => {
       setStoreState({ ...globalDataStore.getState() });
     });

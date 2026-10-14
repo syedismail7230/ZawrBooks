@@ -49,7 +49,9 @@ export async function POST(req: Request) {
       };
 
       const updated = serverStore.saveStoreState({
-        organization: state.organization ? serverStore.saveOrganization(state.organization) : current.organization,
+        organization: (state.organization && state.organization.gstin !== '29AABCZ9999F1Z9' && state.organization.name !== 'Zawr Global Industries')
+          ? serverStore.saveOrganization(state.organization)
+          : current.organization,
         expenses: mergeById(current.expenses, state.expenses),
         vendorBills: mergeById(current.vendorBills, state.vendorBills),
         invoices: mergeById(current.invoices, state.invoices),

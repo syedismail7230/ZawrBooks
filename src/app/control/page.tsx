@@ -19,28 +19,56 @@ export default function ControlOverviewPage() {
   const [copiedSql, setCopiedSql] = useState(false);
 
   useEffect(() => {
+    // 1. Fetch server-persisted organization on mount
+    fetch('/api/organization')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.organization) {
+          globalDataStore.setOrganization(data.organization);
+          setLegalName(data.organization.legalName || data.organization.name || '');
+          setGstin(data.organization.gstin || '');
+          setPan(data.organization.pan || '');
+        }
+      })
+      .catch((err) => console.warn('Could not fetch server organization:', err));
+
+    // 2. Subscribe to local store changes
     return globalDataStore.subscribe(() => {
       const s = globalDataStore.getState();
       setStoreState({ ...s });
       if (s.organization) {
-        setLegalName(s.organization.legalName);
-        setGstin(s.organization.gstin);
-        setPan(s.organization.pan);
+        setLegalName(s.organization.legalName || s.organization.name || '');
+        setGstin(s.organization.gstin || '');
+        setPan(s.organization.pan || '');
       }
     });
   }, []);
 
-  const handleSave = () => {
-    if (!legalName.trim()) {
+  const handleSave = async () => {
+    const trimmedLegal = legalName.trim();
+    if (!trimmedLegal) {
       alert('Please enter your business or legal entity name.');
       return;
     }
-    globalDataStore.setOrganization({
-      name: legalName,
-      legalName,
-      gstin,
-      pan,
-    });
+    const updated = {
+      name: trimmedLegal,
+      legalName: trimmedLegal,
+      gstin: gstin.trim(),
+      pan: pan.trim(),
+    };
+
+    globalDataStore.setOrganization(updated);
+
+    try {
+      await fetch('/api/organization', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updated),
+      });
+    } catch (e) {
+      console.error('Failed to save to /api/organization:', e);
+    }
+
     setSaved(true);
     setTimeout(() => setSaved(false), 2500);
   };

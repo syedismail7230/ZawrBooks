@@ -50,6 +50,7 @@ function SubmissionsContent() {
   const [editBusinessPurpose, setEditBusinessPurpose] = useState('');
 
   useEffect(() => {
+    globalDataStore.syncWithServer();
     return globalDataStore.subscribe(() => {
       setStoreState({ ...globalDataStore.getState() });
     });

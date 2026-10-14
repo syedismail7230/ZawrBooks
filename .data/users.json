@@ -5,7 +5,7 @@
     "fullName": "Syed Ismail Zabiulla",
     "role": "owner",
     "department": "Director",
-    "createdAt": "2026-10-14T20:14:32.265Z"
+    "createdAt": "2026-10-14T20:30:47.580Z"
   },
   {
     "id": "usr-md",
@@ -13,7 +13,7 @@
     "fullName": "Mohammed Ahmed",
     "role": "director",
     "department": "Director",
-    "createdAt": "2026-10-14T20:14:32.266Z"
+    "createdAt": "2026-10-14T20:30:47.581Z"
   },
   {
     "id": "usr-finance",
@@ -21,6 +21,6 @@
     "fullName": "Zawr Finance Accounts",
     "role": "finance_admin",
     "department": "Corporate Finance",
-    "createdAt": "2026-10-14T20:14:32.266Z"
+    "createdAt": "2026-10-14T20:30:47.581Z"
   }
 ]

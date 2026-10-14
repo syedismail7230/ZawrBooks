@@ -4,6 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { TopBar } from '@/components/common/TopBar';
+import { BrandLogo } from '@/components/common/BrandLogo';
 import { Building2, Users, CheckSquare, History, ShieldAlert } from 'lucide-react';
 
 export const ControlLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -22,8 +23,8 @@ export const ControlLayout: React.FC<{ children: React.ReactNode }> = ({ childre
 
       <div className="bg-[#111111] text-white px-6 py-4 border-b border-[#222222]">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <ShieldAlert size={18} className="text-[#FFDD00]" />
+          <div className="flex items-center gap-2.5">
+            <BrandLogo variant="icon" className="w-5 h-5 shrink-0" />
             <h1 className="text-sm font-bold uppercase tracking-wider">
               Zawr Books Control Centre
             </h1>

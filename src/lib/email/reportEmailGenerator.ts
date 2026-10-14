@@ -32,6 +32,13 @@ export interface GeneratedEmailReport {
     content: Buffer;
     contentType: string;
   };
+  attachments?: Array<{
+    filename: string;
+    content: Buffer | string;
+    contentType?: string;
+    cid?: string;
+    contentDisposition?: 'attachment' | 'inline';
+  }>;
 }
 
 /**
@@ -65,6 +72,9 @@ export function generateFinancialReportHtml(options: ReportGeneratorOptions): st
   const dateFormatted = formatLongDate(now);
   const timeFormatted = formatShortTime(now);
   const orgName = storeState.organization?.legalName || storeState.organization?.name || 'Zawr Industries';
+  const displayTitle = reportName.toLowerCase().startsWith(frequency.toLowerCase())
+    ? reportName
+    : `${frequency} ${reportName}`;
 
   // Compute common accounting figures
   const pnl = calculateProfitAndLoss(storeState.accounts);
@@ -807,10 +817,19 @@ export function generateFinancialReportHtml(options: ReportGeneratorOptions): st
     <!-- Top Executive Header (Table-based for complete Gmail & Outlook email client compatibility) -->
     <table role="presentation" width="100%" border="0" cellpadding="0" cellspacing="0" style="width: 100%; border-collapse: collapse;">
       <tr>
-        <td align="left" valign="baseline" style="font-size: 20px; letter-spacing: -0.3px; line-height: 24px; padding: 0;">
-          <strong style="color: #111111; font-weight: 900;">ZAWR</strong>&nbsp;<span style="font-weight: 300; color: #333333;">INDUSTRIES</span>
+        <td align="left" valign="middle" style="padding: 0;">
+          <table role="presentation" border="0" cellpadding="0" cellspacing="0">
+            <tr>
+              <td valign="middle">
+                <img src="cid:zawr-brand-logo" alt="ZAWR BOOKS — ZAWR INDUSTRIES" height="34" style="display: block; height: 34px; width: auto; max-width: 230px; border: 0; outline: none; text-decoration: none;" />
+              </td>
+            </tr>
+          </table>
+          <div style="display: none; font-size: 0; max-height: 0; line-height: 0; mso-hide: all; color: transparent;">
+            ZAWR INDUSTRIES
+          </div>
         </td>
-        <td align="right" valign="baseline" style="font-size: 11px; font-weight: 600; color: #5f6368; letter-spacing: 1.5px; text-transform: uppercase; white-space: nowrap; line-height: 24px; padding: 0;">
+        <td align="right" valign="middle" style="font-size: 11px; font-weight: 600; color: #5f6368; letter-spacing: 1.5px; text-transform: uppercase; white-space: nowrap; line-height: 24px; padding: 0;">
           EXECUTIVE FINANCIAL REPORT
         </td>
       </tr>
@@ -820,7 +839,7 @@ export function generateFinancialReportHtml(options: ReportGeneratorOptions): st
 
     <!-- Title & Greeting -->
     <h1 style="font-size: 22px; font-weight: 700; color: #111111; margin: 0 0 16px 0; line-height: 1.25;">
-      ${frequency} ${reportName}
+      ${displayTitle}
     </h1>
 
     <p style="font-size: 14px; color: #111111; margin: 0 0 14px 0;">
@@ -1274,14 +1293,44 @@ export function compileFinancialReportEmail(options: ReportGeneratorOptions): Ge
   const htmlContent = generateFinancialReportHtml(options);
   const excel = generateFinancialReportExcel(options);
 
+  const displayTitle = reportName.toLowerCase().startsWith(frequency.toLowerCase())
+    ? reportName
+    : `${frequency} ${reportName}`;
+
+  let logoBuffer: Buffer;
+  try {
+    const fs = require('fs');
+    const path = require('path');
+    const emailLogoPath = path.join(process.cwd(), 'public', 'logo-email.png');
+    const fallbackLogoPath = path.join(process.cwd(), 'public', 'logo-landscape.png');
+    if (fs.existsSync(emailLogoPath)) {
+      logoBuffer = fs.readFileSync(emailLogoPath);
+    } else if (fs.existsSync(fallbackLogoPath)) {
+      logoBuffer = fs.readFileSync(fallbackLogoPath);
+    } else {
+      logoBuffer = Buffer.from('');
+    }
+  } catch {
+    logoBuffer = Buffer.from('');
+  }
+
   return {
-    subject: `[ZAWR EXECUTIVE] ${frequency} ${reportName} — Official Financial & Operations Report`,
+    subject: `[ZAWR EXECUTIVE] ${displayTitle} — Official Financial & Operations Report`,
     htmlContent,
-    textContent: `Zawr Industries Executive Financial Report: ${reportName} (${frequency}). Generated according to Indian Accounting Standards. Please view attached Excel document ${excel.filename}.`,
+    textContent: `Zawr Industries Executive Financial Report: ${displayTitle}. Generated according to Indian Accounting Standards. Please view attached Excel document ${excel.filename}.`,
     attachment: {
       filename: excel.filename,
       content: excel.buffer,
       contentType: excel.contentType,
     },
+    attachments: [
+      {
+        filename: 'zawr-logo.png',
+        content: logoBuffer,
+        contentType: 'image/png',
+        cid: 'zawr-brand-logo',
+        contentDisposition: 'inline',
+      },
+    ],
   };
 }

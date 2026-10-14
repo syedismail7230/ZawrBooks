@@ -85,6 +85,9 @@ describe('Zawr Industries Executive Email & Excel Report Generator', () => {
     expect(compiled.attachment.contentType).toBe(
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     );
+    expect(compiled.attachments).toBeDefined();
+    expect(compiled.attachments?.some((a) => a.cid === 'zawr-brand-logo')).toBe(true);
+    expect(compiled.htmlContent).toContain('cid:zawr-brand-logo');
   });
 
   it('allows adding and deleting report delivery schedules with audit logging', () => {

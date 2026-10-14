@@ -7,6 +7,7 @@ import { Button } from '@/components/common/Button';
 import { Badge } from '@/components/common/Badge';
 import { CurrencyDisplay } from '@/components/common/CurrencyDisplay';
 import { ReceiptScannerModal } from '@/components/scanner/ReceiptScannerModal';
+import { BrandLogo } from '@/components/common/BrandLogo';
 import { globalDataStore } from '@/lib/store/dataStore';
 import { formatDate } from '@/lib/utils';
 import { Scan, Clock, CheckCircle2, AlertCircle, ArrowRight, FileText } from 'lucide-react';
@@ -38,8 +39,14 @@ export default function MobileDashboardPage() {
     <MobileLayout>
       {/* Welcome Hero Banner */}
       <div className="bg-[#111111] text-white p-4">
-        <div className="text-[11px] text-gray-400 uppercase tracking-wider font-mono">
-          Zawr Books Mobile
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <BrandLogo variant="icon" className="w-5 h-5 shrink-0" />
+            <span className="text-[11px] text-gray-300 uppercase tracking-wider font-mono font-semibold">
+              Zawr Books Mobile
+            </span>
+          </div>
+          <BrandLogo variant="square" className="h-5 w-auto opacity-80" />
         </div>
         <h1 className="text-base font-bold mt-1">Hello, {employee?.fullName || 'User'}</h1>
         <p className="text-xs text-gray-300 mt-0.5">

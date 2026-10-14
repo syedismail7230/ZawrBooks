@@ -4,6 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { TopBar } from '@/components/common/TopBar';
+import { BrandLogo } from '@/components/common/BrandLogo';
 import { globalDataStore } from '@/lib/store/dataStore';
 import {
   LayoutDashboard,
@@ -110,9 +111,12 @@ export const WebLayout: React.FC<{ children: React.ReactNode }> = ({ children })
             })}
           </nav>
 
-          <div className="p-3 border-t border-[#E5E5E5] bg-[#FFFFFF] text-[10px] text-[#888888]">
-            <div className="font-mono">Zawr Engine v1.0</div>
-            <div>FY 2026-27 (Locked: 31-Mar-26)</div>
+          <div className="p-3 border-t border-[#E5E5E5] bg-[#FFFFFF] flex items-center gap-2.5">
+            <BrandLogo variant="icon" className="w-5 h-5 shrink-0" />
+            <div className="text-[10px] text-[#888888] leading-tight">
+              <div className="font-mono font-medium text-[#333333]">Zawr Engine v1.0</div>
+              <div>FY 2026-27 (Locked: 31-Mar-26)</div>
+            </div>
           </div>
         </aside>
 

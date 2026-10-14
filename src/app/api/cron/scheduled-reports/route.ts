@@ -42,7 +42,7 @@ async function handleCronExecution(request: Request) {
       subject: compiled.subject,
       htmlContent: compiled.htmlContent,
       textContent: compiled.textContent,
-      attachments: [compiled.attachment],
+      attachments: [compiled.attachment, ...(compiled.attachments || [])],
     });
 
     executionResults.push({

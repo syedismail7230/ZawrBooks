@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { globalDataStore } from '@/lib/store/dataStore';
 import { Button } from '@/components/common/Button';
+import { BrandLogo } from '@/components/common/BrandLogo';
 import { ReceiptScannerModal } from '@/components/scanner/ReceiptScannerModal';
 import { BalancedJournalModal } from '@/components/finance/BalancedJournalModal';
 import {
@@ -50,13 +51,8 @@ export const TopBar: React.FC = () => {
         {/* Upper Brand & Switcher Bar */}
         <div className="px-4 py-2 flex items-center justify-between border-b border-[#F0EFEA] bg-[#FFFFFF]">
           <div className="flex items-center gap-6">
-            <Link href="/web" className="flex items-center gap-2 text-decoration-none">
-              <span className="w-6 h-6 bg-[#111111] text-white flex items-center justify-center font-bold text-xs">
-                Z
-              </span>
-              <span className="font-bold text-sm tracking-tight text-[#111111]">
-                ZAWR BOOKS
-              </span>
+            <Link href="/web" className="flex items-center text-decoration-none group select-none py-0.5">
+              <BrandLogo variant="reactive" className="transition-transform group-hover:scale-[1.02]" />
             </Link>
 
             {/* Organization Tag */}

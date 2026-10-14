@@ -51,6 +51,7 @@ export async function POST(request: Request) {
         textContent: compiled.textContent,
         attachments: [
           compiled.attachment,
+          ...(compiled.attachments || []),
           ...(body.attachments || []),
         ],
         from: body.from,

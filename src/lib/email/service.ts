@@ -4,6 +4,8 @@ export interface EmailAttachment {
   filename: string;
   content: string | Buffer;
   contentType?: string;
+  cid?: string;
+  contentDisposition?: 'attachment' | 'inline';
 }
 
 export interface SendEmailPayload {
@@ -90,6 +92,12 @@ export class NodemailerEmailService implements IEmailProvider {
           filename: att.filename,
           content: att.content,
           contentType: att.contentType,
+          ...(att.cid
+            ? {
+                cid: att.cid,
+                contentDisposition: att.contentDisposition || 'inline',
+              }
+            : {}),
         })),
       };
 

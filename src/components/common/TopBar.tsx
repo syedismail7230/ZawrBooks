@@ -76,7 +76,7 @@ export const TopBar: React.FC = () => {
             </Link>
 
             {/* Organization Tag */}
-            <div className="hidden md:flex items-center gap-2 text-[11px] text-[#666666] border-l border-[#E5E5E5] pl-4">
+            <div className="hidden lg:flex items-center gap-2 text-[11px] text-[#666666] border-l border-[#E5E5E5] pl-4">
               <Building2 size={13} className="text-[#888888]" />
               <span className="font-medium text-[#111111]" suppressHydrationWarning>
                 {mounted
@@ -89,9 +89,9 @@ export const TopBar: React.FC = () => {
             </div>
           </div>
 
-          {/* RBAC Protected Surface Navigation */}
+          {/* RBAC Protected Surface Navigation (Desktop only: hidden on mobile) */}
           {isAuthenticated && (
-            <div className="flex items-center gap-1 bg-[#F4F3EF] p-0.5 border border-[#E5E5E5]">
+            <div className="hidden md:flex items-center gap-1 bg-[#F4F3EF] p-0.5 border border-[#E5E5E5]">
               {canAccessWeb && (
                 <Link
                   href="/web"
@@ -102,7 +102,7 @@ export const TopBar: React.FC = () => {
                   }`}
                 >
                   <Laptop size={13} />
-                  <span className="hidden sm:inline">Finance Web</span>
+                  <span>Finance Web</span>
                 </Link>
               )}
 
@@ -116,7 +116,7 @@ export const TopBar: React.FC = () => {
                   }`}
                 >
                   <Smartphone size={13} />
-                  <span className="hidden sm:inline">Mobile PWA</span>
+                  <span>Mobile PWA</span>
                 </Link>
               )}
 
@@ -130,14 +130,22 @@ export const TopBar: React.FC = () => {
                   }`}
                 >
                   <Shield size={13} />
-                  <span className="hidden sm:inline">Control Centre</span>
+                  <span>Control Centre</span>
                 </Link>
               )}
             </div>
           )}
 
-          {/* Right Action & RBAC Authenticated Profile */}
-          <div className="flex items-center gap-3">
+          {/* Right Action, Realtime Indicator & Profile */}
+          <div className="flex items-center gap-2 sm:gap-3">
+            {/* Realtime Live Pulse Indicator */}
+            <div className="flex items-center gap-1.5 px-2 py-1 bg-[#EDF7ED] border border-[#C8E6C9] text-[10px] text-[#1B5E20] font-mono select-none rounded-xs">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+              </span>
+              <span className="font-bold tracking-tight">LIVE</span>
+            </div>
             {isAuthenticated && (
               <>
                 <Button
@@ -224,6 +232,43 @@ export const TopBar: React.FC = () => {
                           <span>RBAC User Management</span>
                         </Link>
                       )}
+
+                      {/* Mobile Surface Switcher (Visible on mobile screens) */}
+                      <div className="md:hidden py-1 border-t border-[#E5E5E5] my-1">
+                        <div className="px-2 py-1 text-[10px] uppercase font-bold text-[#888888]">
+                          Switch Surface
+                        </div>
+                        {canAccessWeb && (
+                          <Link
+                            href="/web"
+                            onClick={() => setUserDropdownOpen(false)}
+                            className="w-full text-left px-2 py-1.5 text-xs text-[#333333] hover:bg-[#F4F3EF] flex items-center gap-2"
+                          >
+                            <Laptop size={13} className="text-[#666666]" />
+                            <span>Finance Web</span>
+                          </Link>
+                        )}
+                        {canAccessMobile && (
+                          <Link
+                            href="/mobile"
+                            onClick={() => setUserDropdownOpen(false)}
+                            className="w-full text-left px-2 py-1.5 text-xs text-[#333333] hover:bg-[#F4F3EF] flex items-center gap-2"
+                          >
+                            <Smartphone size={13} className="text-[#666666]" />
+                            <span>Mobile PWA</span>
+                          </Link>
+                        )}
+                        {canAccessControl && (
+                          <Link
+                            href="/control"
+                            onClick={() => setUserDropdownOpen(false)}
+                            className="w-full text-left px-2 py-1.5 text-xs text-[#333333] hover:bg-[#F4F3EF] flex items-center gap-2"
+                          >
+                            <Shield size={13} className="text-[#666666]" />
+                            <span>Control Centre</span>
+                          </Link>
+                        )}
+                      </div>
 
                       <div className="my-1 border-t border-[#E5E5E5]" />
 

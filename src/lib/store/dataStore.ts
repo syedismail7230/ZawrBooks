@@ -93,6 +93,8 @@ class DataStore {
   private state: DataStoreState;
   private listeners: Set<() => void> = new Set();
   private isLoadedFromStorage = false;
+  private broadcastChannel: BroadcastChannel | null = null;
+  private lastSyncTimestamp: number = Date.now();
 
   constructor() {
     this.state = {
@@ -119,7 +121,37 @@ class DataStore {
 
     if (typeof window !== 'undefined') {
       this.loadFromLocalStorage();
+      this.initRealtimeSync();
     }
+  }
+
+  private initRealtimeSync() {
+    if (typeof window === 'undefined') return;
+
+    // 1. Cross-tab real-time communication via BroadcastChannel
+    if ('BroadcastChannel' in window) {
+      try {
+        this.broadcastChannel = new BroadcastChannel('zawr_realtime_data_channel');
+        this.broadcastChannel.onmessage = (event) => {
+          if (event.data?.type === 'REALTIME_STORE_SYNC') {
+            this.lastSyncTimestamp = event.data.timestamp || Date.now();
+            this.loadFromLocalStorage();
+            this.notify();
+          }
+        };
+      } catch (e) {
+        console.warn('BroadcastChannel not supported or blocked:', e);
+      }
+    }
+
+    // 2. Storage event fallback for older browsers or if channel drops
+    window.addEventListener('storage', (e) => {
+      if (e.key === STORAGE_KEY) {
+        this.lastSyncTimestamp = Date.now();
+        this.loadFromLocalStorage();
+        this.notify();
+      }
+    });
   }
 
   private loadFromLocalStorage() {
@@ -167,13 +199,28 @@ class DataStore {
   }
 
   private persist() {
+    this.lastSyncTimestamp = Date.now();
     if (typeof window !== 'undefined') {
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(this.state));
+        this.broadcastChannel?.postMessage({
+          type: 'REALTIME_STORE_SYNC',
+          timestamp: this.lastSyncTimestamp,
+        });
       } catch (e) {
         console.warn('Could not persist state:', e);
       }
     }
+    this.notify();
+  }
+
+  public getLastSyncTimestamp(): number {
+    return this.lastSyncTimestamp;
+  }
+
+  public syncNow() {
+    this.loadFromLocalStorage();
+    this.lastSyncTimestamp = Date.now();
     this.notify();
   }
 

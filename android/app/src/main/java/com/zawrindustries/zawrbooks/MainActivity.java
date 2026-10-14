@@ -24,7 +24,7 @@ public class MainActivity extends Activity {
 
     private static final String PREFS_NAME = "ZawrBooksConfig";
     private static final String KEY_SERVER_URL = "server_url";
-    private static final String DEFAULT_URL = "https://zawr-books.vercel.app/mobile";
+    private static final String DEFAULT_URL = "https://books.zawrindustries.com/mobile";
 
     private SharedPreferences mPrefs;
 
@@ -39,12 +39,8 @@ public class MainActivity extends Activity {
 
         configureWebView();
 
-        String configuredUrl = mPrefs.getString(KEY_SERVER_URL, "");
-        if (configuredUrl != null && !configuredUrl.trim().isEmpty()) {
-            mWebView.loadUrl(configuredUrl);
-        } else {
-            showSetupPage("");
-        }
+        String configuredUrl = mPrefs.getString(KEY_SERVER_URL, DEFAULT_URL);
+        mWebView.loadUrl(configuredUrl);
     }
 
     private void configureWebView() {
@@ -93,7 +89,7 @@ public class MainActivity extends Activity {
                 + "<h1>Connect Mobile Server</h1>"
                 + "<p>Enter your live Vercel deployment URL or custom domain to connect this mobile app directly to your books.</p>"
                 + "<label for='urlInput'>Server / Vercel Domain</label>"
-                + "<input id='urlInput' type='text' placeholder='https://your-project.vercel.app' value='" + cleanCurrent + "' autocorrect='off' autocapitalize='none' spellcheck='false' />"
+                + "<input id='urlInput' type='text' placeholder='https://books.zawrindustries.com' value='" + (cleanCurrent.isEmpty() ? "https://books.zawrindustries.com" : cleanCurrent) + "' autocorrect='off' autocapitalize='none' spellcheck='false' />"
                 + "<button onclick='submitUrl()'>Save & Connect</button>"
                 + "<div class='note'>You only need to configure this once. The app will remember your server domain automatically.</div>"
                 + "</div>"

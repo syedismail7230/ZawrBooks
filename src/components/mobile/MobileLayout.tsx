@@ -8,7 +8,7 @@ import { AuthGuard } from '@/components/auth/AuthGuard';
 import { ReceiptScannerModal } from '@/components/scanner/ReceiptScannerModal';
 import { globalDataStore } from '@/lib/store/dataStore';
 import { ExpenseSubmission } from '@/types';
-import { Home, Scan, FileText, Bell, User, RefreshCw, CheckCircle2, AlertCircle, X } from 'lucide-react';
+import { Home, Scan, FileText, Bell, User, RefreshCw, CheckCircle2, AlertCircle, X, Sparkles } from 'lucide-react';
 
 export const MobileLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const pathname = usePathname();
@@ -22,6 +22,39 @@ export const MobileLayout: React.FC<{ children: React.ReactNode }> = ({ children
     message: string;
     type: 'success' | 'warning' | 'info';
   } | null>(null);
+
+  // Over-The-Air (OTA) Live Update Detection
+  const [otaUpdateAvailable, setOtaUpdateAvailable] = useState<boolean>(false);
+  const currentBuildIdRef = useRef<string | null>(null);
+
+  const checkForOtaUpdate = async () => {
+    try {
+      const res = await fetch('/api/app/version', { cache: 'no-store' });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.buildId) {
+          if (!currentBuildIdRef.current) {
+            currentBuildIdRef.current = data.buildId;
+          } else if (currentBuildIdRef.current !== data.buildId) {
+            setOtaUpdateAvailable(true);
+          }
+        }
+      }
+    } catch (e) {
+      // offline or silent
+    }
+  };
+
+  const applyOtaUpdate = () => {
+    if (typeof window !== 'undefined') {
+      const zawrApp = (window as any).ZawrApp;
+      if (zawrApp && typeof zawrApp.refreshApp === 'function') {
+        zawrApp.refreshApp();
+      } else {
+        window.location.reload();
+      }
+    }
+  };
 
   const prevExpensesRef = useRef<ExpenseSubmission[]>(storeState.expenses);
 
@@ -94,6 +127,13 @@ export const MobileLayout: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, []);
 
+  // Check for live Over-The-Air deployments
+  useEffect(() => {
+    checkForOtaUpdate();
+    const otaInterval = setInterval(checkForOtaUpdate, 30000);
+    return () => clearInterval(otaInterval);
+  }, []);
+
   // Real-time relative timestamp update
   useEffect(() => {
     const updateLabel = () => {
@@ -163,6 +203,31 @@ export const MobileLayout: React.FC<{ children: React.ReactNode }> = ({ children
     <AuthGuard>
       <div className="min-h-screen bg-[#F4F3EF] flex flex-col font-sans select-none sm:select-text">
         <TopBar />
+
+        {/* Over-The-Air (OTA) Live Update Banner */}
+        {otaUpdateAvailable && (
+          <div className="max-w-md mx-auto w-full px-4 pt-2 sticky top-16 z-40 animate-in slide-in-from-top-2 duration-200">
+            <div className="p-3 bg-[#111111] text-white border border-black shadow-xl flex items-center justify-between gap-3 text-xs">
+              <div className="flex items-center gap-2">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                </span>
+                <div>
+                  <div className="font-bold text-[11px] uppercase tracking-wider text-white">Live Update Ready</div>
+                  <div className="text-[10px] text-gray-300">New features deployed over-the-air</div>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={applyOtaUpdate}
+                className="px-3 py-1.5 bg-white text-black font-bold text-[10px] uppercase tracking-wider hover:bg-[#F4F3EF] active:scale-95 transition-all shadow-sm cursor-pointer shrink-0"
+              >
+                Update Now
+              </button>
+            </div>
+          </div>
+        )}
 
 
 

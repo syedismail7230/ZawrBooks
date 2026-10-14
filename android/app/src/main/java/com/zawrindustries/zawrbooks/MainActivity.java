@@ -140,6 +140,30 @@ public class MainActivity extends Activity {
         public void resetServer() {
             activity.runOnUiThread(new SetupPageRunnable(activity));
         }
+
+        @android.webkit.JavascriptInterface
+        public void refreshApp() {
+            activity.runOnUiThread(new ReloadRunnable(activity.mWebView));
+        }
+
+        @android.webkit.JavascriptInterface
+        public String getNativeVersion() {
+            return "1.0.0";
+        }
+    }
+
+    static class ReloadRunnable implements Runnable {
+        private final WebView view;
+
+        public ReloadRunnable(WebView view) {
+            this.view = view;
+        }
+
+        @Override
+        public void run() {
+            view.clearCache(true);
+            view.reload();
+        }
     }
 
     static class UrlLoaderRunnable implements Runnable {

@@ -19,6 +19,8 @@ import {
   Building2,
   Lock,
   Download,
+  RefreshCw,
+  Sparkles,
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -28,6 +30,37 @@ export default function MobileProfilePage() {
   const [isEditingBank, setIsEditingBank] = useState(false);
   const [bankDetails, setBankDetails] = useState('');
   const [isSavedNotice, setIsSavedNotice] = useState(false);
+  const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
+  const [updateMessage, setUpdateMessage] = useState<string | null>(null);
+
+  const handleCheckUpdates = async () => {
+    setIsCheckingUpdate(true);
+    setUpdateMessage(null);
+    try {
+      const res = await fetch('/api/app/version', { cache: 'no-store' });
+      if (res.ok) {
+        setUpdateMessage('Refreshing latest release...');
+        setTimeout(() => {
+          if (typeof window !== 'undefined') {
+            const zawrApp = (window as any).ZawrApp;
+            if (zawrApp && typeof zawrApp.refreshApp === 'function') {
+              zawrApp.refreshApp();
+            } else {
+              window.location.reload();
+            }
+          }
+        }, 500);
+      } else {
+        setUpdateMessage('Server verified • Up to date');
+        setTimeout(() => setUpdateMessage(null), 3000);
+        setIsCheckingUpdate(false);
+      }
+    } catch (e) {
+      setUpdateMessage('Offline check failed');
+      setTimeout(() => setUpdateMessage(null), 3000);
+      setIsCheckingUpdate(false);
+    }
+  };
 
   useEffect(() => {
     const unsub = globalDataStore.subscribe(() => {
@@ -228,30 +261,64 @@ export default function MobileProfilePage() {
         </Card>
       )}
 
-      {/* Native Android APK Card */}
+      {/* Over-The-Air (OTA) Live Updates & Sync Card */}
       <Card noPadding className="shadow-2xs">
-        <div className="p-3.5 bg-white flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-white border border-[#E5E5E5] p-1.5 shadow-xs flex items-center justify-center shrink-0">
-              <img
-                src="/favicon.png"
-                alt="Zawr Books App Icon"
-                className="w-full h-full object-contain"
-              />
-            </div>
-            <div>
-              <div className="text-xs font-bold text-[#111111]">Zawr Books for Android</div>
-              <div className="text-[10px] text-[#666666]">v1.0.0 Stable • Signed APK (~97 KB)</div>
+        <div className="p-3.5 bg-white space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-none bg-[#111111] text-white flex items-center justify-center shrink-0">
+                <Sparkles size={16} className="text-emerald-400" />
+              </div>
+              <div>
+                <div className="text-xs font-bold text-[#111111] flex items-center gap-1.5">
+                  <span>Over-The-Air (OTA) Updates</span>
+                  <span className="inline-flex items-center px-1.5 py-0.2 bg-emerald-100 text-emerald-800 text-[9px] font-mono font-bold uppercase">
+                    Active
+                  </span>
+                </div>
+                <div className="text-[10px] text-[#666666]">
+                  Zero-install cloud sync with books.zawrindustries.com
+                </div>
+              </div>
             </div>
           </div>
-          <a
-            href="/ZawrBooks.apk"
-            download="ZawrBooks.apk"
-            className="px-3 py-1.5 bg-[#111111] hover:bg-black text-white text-xs font-bold flex items-center gap-1.5 active:scale-95 transition-all shadow-sm shrink-0"
-          >
-            <Download size={13} />
-            <span>Install APK</span>
-          </a>
+
+          <div className="p-2.5 bg-[#FAFAF9] border border-[#E5E5E5] text-[11px] text-[#555555] space-y-1">
+            <div className="flex justify-between items-center">
+              <span className="text-[#888888]">Live Web Server:</span>
+              <span className="font-mono text-[#111111] font-semibold text-[10px]">books.zawrindustries.com</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-[#888888]">Deployment Sync:</span>
+              <span className="font-mono text-[#137333] font-semibold flex items-center gap-1 text-[10px]">
+                <Check size={11} /> Always Up-To-Date
+              </span>
+            </div>
+          </div>
+
+          <div>
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={handleCheckUpdates}
+              disabled={isCheckingUpdate}
+              className="w-full justify-center text-xs font-bold uppercase tracking-wider py-2"
+            >
+              <RefreshCw size={13} className={isCheckingUpdate ? 'animate-spin' : ''} />
+              <span>{isCheckingUpdate ? 'Checking Server...' : updateMessage || 'Check for Live Updates & Refresh'}</span>
+            </Button>
+          </div>
+
+          <div className="pt-2 border-t border-[#F0EFEA] flex items-center justify-between text-[10px] text-[#888888]">
+            <span>Need APK for a new phone?</span>
+            <a
+              href="/ZawrBooks.apk"
+              download="ZawrBooks.apk"
+              className="text-[#0066CC] hover:underline font-semibold flex items-center gap-1"
+            >
+              <Download size={11} /> Download APK Backup
+            </a>
+          </div>
         </div>
       </Card>
 

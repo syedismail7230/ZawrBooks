@@ -50,9 +50,9 @@ export const TopBar: React.FC = () => {
   const isControl = pathname.startsWith('/control');
 
   // RBAC Permission checks for surface switcher
+  const isCeo = currentUser?.role === 'owner' && (currentUser?.email?.toLowerCase() === 'ceo@zawrindustries.com' || currentUser?.fullName?.toLowerCase().includes('syed ismail'));
   const canAccessWeb = ['owner', 'director', 'finance_admin', 'accountant', 'approver', 'auditor'].includes(role);
-  const canAccessControl = ['owner', 'director', 'finance_admin'].includes(role);
-  const canAccessMobile = true; // All authenticated users have access to Mobile PWA
+  const canAccessControl = isCeo; // Control Centre is strictly CEO only
 
   const handleLogout = async () => {
     try {
@@ -89,7 +89,7 @@ export const TopBar: React.FC = () => {
             </div>
           </div>
 
-          {/* RBAC Protected Surface Navigation (Desktop only: hidden on mobile) */}
+          {/* CEO-Only Workspace Switcher: Finance Web & Control Centre (Mobile app is a separate standalone APK) */}
           {isAuthenticated && (
             <div className="hidden md:flex items-center gap-1 bg-[#F4F3EF] p-0.5 border border-[#E5E5E5]">
               {canAccessWeb && (
@@ -106,20 +106,6 @@ export const TopBar: React.FC = () => {
                 </Link>
               )}
 
-              {canAccessMobile && (
-                <Link
-                  href="/mobile"
-                  className={`px-3 py-1 text-xs font-medium flex items-center gap-1.5 transition-colors ${
-                    isMobile
-                      ? 'bg-white text-[#111111] shadow-none border border-[#E5E5E5]'
-                      : 'text-[#666666] hover:text-[#111111]'
-                  }`}
-                >
-                  <Smartphone size={13} />
-                  <span>Mobile PWA</span>
-                </Link>
-              )}
-
               {canAccessControl && (
                 <Link
                   href="/control"
@@ -128,6 +114,7 @@ export const TopBar: React.FC = () => {
                       ? 'bg-white text-[#111111] shadow-none border border-[#E5E5E5]'
                       : 'text-[#666666] hover:text-[#111111]'
                   }`}
+                  title="CEO Governance & RBAC Control Centre"
                 >
                   <Shield size={13} />
                   <span>Control Centre</span>
@@ -233,42 +220,7 @@ export const TopBar: React.FC = () => {
                         </Link>
                       )}
 
-                      {/* Mobile Surface Switcher (Visible on mobile screens) */}
-                      <div className="md:hidden py-1 border-t border-[#E5E5E5] my-1">
-                        <div className="px-2 py-1 text-[10px] uppercase font-bold text-[#888888]">
-                          Switch Surface
-                        </div>
-                        {canAccessWeb && (
-                          <Link
-                            href="/web"
-                            onClick={() => setUserDropdownOpen(false)}
-                            className="w-full text-left px-2 py-1.5 text-xs text-[#333333] hover:bg-[#F4F3EF] flex items-center gap-2"
-                          >
-                            <Laptop size={13} className="text-[#666666]" />
-                            <span>Finance Web</span>
-                          </Link>
-                        )}
-                        {canAccessMobile && (
-                          <Link
-                            href="/mobile"
-                            onClick={() => setUserDropdownOpen(false)}
-                            className="w-full text-left px-2 py-1.5 text-xs text-[#333333] hover:bg-[#F4F3EF] flex items-center gap-2"
-                          >
-                            <Smartphone size={13} className="text-[#666666]" />
-                            <span>Mobile PWA</span>
-                          </Link>
-                        )}
-                        {canAccessControl && (
-                          <Link
-                            href="/control"
-                            onClick={() => setUserDropdownOpen(false)}
-                            className="w-full text-left px-2 py-1.5 text-xs text-[#333333] hover:bg-[#F4F3EF] flex items-center gap-2"
-                          >
-                            <Shield size={13} className="text-[#666666]" />
-                            <span>Control Centre</span>
-                          </Link>
-                        )}
-                      </div>
+
 
                       <div className="my-1 border-t border-[#E5E5E5]" />
 

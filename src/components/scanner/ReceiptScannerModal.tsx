@@ -166,7 +166,7 @@ export const ReceiptScannerModal: React.FC<ReceiptScannerModalProps> = ({
               Supports Camera photos, PDF tax invoices, JPG, PNG and multi-page receipts.
             </p>
 
-            <div className="mt-5 flex items-center justify-center gap-3">
+            <div className="mt-5 flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-2.5">
               <label className="cursor-pointer">
                 <input
                   type="file"
@@ -174,7 +174,7 @@ export const ReceiptScannerModal: React.FC<ReceiptScannerModalProps> = ({
                   className="hidden"
                   onChange={handleFileUpload}
                 />
-                <Button variant="primary" size="md">
+                <Button variant="primary" size="md" className="w-full justify-center">
                   <Upload size={14} /> Upload Real Document
                 </Button>
               </label>
@@ -187,7 +187,7 @@ export const ReceiptScannerModal: React.FC<ReceiptScannerModalProps> = ({
                   className="hidden"
                   onChange={handleFileUpload}
                 />
-                <Button variant="outline" size="md">
+                <Button variant="outline" size="md" className="w-full justify-center">
                   <Camera size={14} /> Camera Capture
                 </Button>
               </label>
@@ -436,11 +436,11 @@ export const ReceiptScannerModal: React.FC<ReceiptScannerModalProps> = ({
           </div>
 
           {/* Action Footer */}
-          <div className="flex justify-between items-center pt-3 border-t border-[#E5E5E5]">
-            <Button variant="outline" size="sm" onClick={() => setStep(1)}>
+          <div className="flex flex-col-reverse sm:flex-row justify-between items-stretch sm:items-center gap-2 pt-3 border-t border-[#E5E5E5]">
+            <Button variant="outline" size="sm" onClick={() => setStep(1)} className="w-full sm:w-auto">
               Rescan / Change File
             </Button>
-            <Button variant="primary" size="md" onClick={handleSubmitExpense}>
+            <Button variant="primary" size="md" onClick={handleSubmitExpense} className="w-full sm:w-auto">
               Submit Expense for Approval
             </Button>
           </div>

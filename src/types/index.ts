@@ -28,6 +28,8 @@ export interface UserProfile {
   role: UserRole;
   avatarUrl?: string;
   department?: string;
+  bankDetails?: string;
+  phone?: string;
   passwordHash?: string;
   lastLoginAt?: string;
 }

@@ -1,0 +1,4 @@
+# Strict Private Platform: Access only through direct authenticated link
+# Disallow all indexing, crawling, and search engine listing
+User-agent: *
+Disallow: /

@@ -19,7 +19,7 @@ export const ControlLayout: React.FC<{ children: React.ReactNode }> = ({ childre
   ];
 
   return (
-    <AuthGuard allowedRoles={['owner', 'director', 'finance_admin']}>
+    <AuthGuard allowedRoles={['owner']}>
       <div className="min-h-screen bg-[#F4F3EF] flex flex-col font-sans">
         <TopBar />
 

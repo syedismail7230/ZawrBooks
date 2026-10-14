@@ -155,6 +155,7 @@ class DataStore {
   }
 
   private loadFromLocalStorage() {
+    if (typeof window === 'undefined' || typeof localStorage === 'undefined') return;
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
@@ -555,6 +556,74 @@ class DataStore {
       { status: decision, approver: this.state.currentUser.fullName },
       comment
     );
+
+    this.persist();
+    return { success: true };
+  }
+
+  // Update Expense (e.g. employee resubmitting after return, or fixing fields)
+  public updateExpense(
+    expenseId: string,
+    updates: Partial<ExpenseSubmission>
+  ): { success: boolean; error?: string; expense?: ExpenseSubmission } {
+    const exp = this.state.expenses.find((e) => e.id === expenseId);
+    if (!exp) return { success: false, error: 'Expense not found' };
+
+    const prevStatus = exp.status;
+    Object.assign(exp, updates);
+
+    // If it was returned and is now resubmitted by employee without specifying status, move to Submitted
+    if (prevStatus === 'Returned' && !updates.status) {
+      exp.status = 'Submitted';
+    }
+
+    this.recordAuditEvent(
+      'UPDATE_EXPENSE',
+      'ExpenseSubmission',
+      exp.id,
+      { status: prevStatus },
+      { status: exp.status, amount: exp.grandTotalPaise }
+    );
+
+    this.persist();
+    return { success: true, expense: exp };
+  }
+
+  // Delete Expense (only if in draft, returned, or unreviewed state)
+  public deleteExpense(expenseId: string): { success: boolean; error?: string } {
+    const index = this.state.expenses.findIndex((e) => e.id === expenseId);
+    if (index === -1) return { success: false, error: 'Expense not found' };
+
+    const exp = this.state.expenses[index];
+    if (exp.status === 'Approved' || exp.status === 'Posted') {
+      return { success: false, error: 'Cannot delete approved or posted expenses' };
+    }
+
+    const [removed] = this.state.expenses.splice(index, 1);
+    this.recordAuditEvent(
+      'DELETE_EXPENSE',
+      'ExpenseSubmission',
+      expenseId,
+      { title: removed.title, amount: removed.grandTotalPaise },
+      null
+    );
+
+    this.persist();
+    return { success: true };
+  }
+
+  // Update User Profile (e.g., bank payout preferences, phone)
+  public updateUserProfile(
+    userId: string,
+    updates: Partial<UserProfile>
+  ): { success: boolean; error?: string } {
+    const user = this.state.users.find((u) => u.id === userId);
+    if (!user) return { success: false, error: 'User not found' };
+
+    Object.assign(user, updates);
+    if (this.state.currentUser.id === userId) {
+      this.state.currentUser = { ...this.state.currentUser, ...updates };
+    }
 
     this.persist();
     return { success: true };

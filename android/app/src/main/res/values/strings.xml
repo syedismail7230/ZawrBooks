@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Zawr Books</string>
+    <string name="default_url">http://10.0.2.2:3000/mobile</string>
+    <string name="loading">Loading Zawr Books...</string>
+    <string name="error_offline">Unable to reach Zawr Books server. Please check your connection.</string>
+    <string name="retry">Retry Connection</string>
+</resources>

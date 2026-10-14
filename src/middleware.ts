@@ -2,6 +2,14 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { verifySessionToken, SESSION_COOKIE_NAME } from '@/lib/auth/session';
 
+function applyNoRobotsHeaders(response: NextResponse): NextResponse {
+  response.headers.set(
+    'X-Robots-Tag',
+    'noindex, nofollow, noarchive, nosnippet, noimageindex, notranslate'
+  );
+  return response;
+}
+
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
@@ -14,9 +22,10 @@ export async function middleware(req: NextRequest) {
     pathname.endsWith('.svg') ||
     pathname.endsWith('.jpg') ||
     pathname.endsWith('.webp') ||
-    pathname === '/manifest.json'
+    pathname === '/manifest.json' ||
+    pathname === '/robots.txt'
   ) {
-    return NextResponse.next();
+    return applyNoRobotsHeaders(NextResponse.next());
   }
 
   const token = req.cookies.get(SESSION_COOKIE_NAME)?.value;
@@ -26,12 +35,12 @@ export async function middleware(req: NextRequest) {
   // 1. If accessing login page while already authenticated -> redirect to dashboard
   if (pathname === '/login') {
     if (isAuthenticated) {
-      return NextResponse.redirect(new URL('/web', req.url));
+      return applyNoRobotsHeaders(NextResponse.redirect(new URL('/web', req.url)));
     }
-    return NextResponse.next();
+    return applyNoRobotsHeaders(NextResponse.next());
   }
 
-  // 2. Protected routes: /web, /control, /mobile
+  // 2. Protected routes: /web, /control, /mobile, /
   const isProtected =
     pathname.startsWith('/web') ||
     pathname.startsWith('/control') ||
@@ -44,28 +53,30 @@ export async function middleware(req: NextRequest) {
       if (pathname !== '/') {
         loginUrl.searchParams.set('from', pathname);
       }
-      return NextResponse.redirect(loginUrl);
+      return applyNoRobotsHeaders(NextResponse.redirect(loginUrl));
     }
 
-    // Role-based route authorization for /control
+    // Role-based route authorization for /control: STRICTLY CEO ONLY
     if (pathname.startsWith('/control')) {
-      const allowedRoles = ['owner', 'director', 'finance_admin'];
-      if (!allowedRoles.includes(session.role)) {
-        return NextResponse.redirect(new URL('/web?error=unauthorized', req.url));
+      const isCeo = session.role === 'owner' && (session.email?.toLowerCase() === 'ceo@zawrindustries.com' || session.fullName?.toLowerCase().includes('syed ismail'));
+      if (!isCeo) {
+        return applyNoRobotsHeaders(NextResponse.redirect(new URL('/web?error=ceo_only_access', req.url)));
       }
     }
 
     // If root '/', redirect authenticated user to their main surface
     if (pathname === '/') {
-      return NextResponse.redirect(
-        new URL(session.role === 'employee' ? '/mobile' : '/web', req.url)
+      return applyNoRobotsHeaders(
+        NextResponse.redirect(
+          new URL(session.role === 'employee' ? '/mobile' : '/web', req.url)
+        )
       );
     }
   }
 
-  return NextResponse.next();
+  return applyNoRobotsHeaders(NextResponse.next());
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
+  matcher: ['/((?!_next/static|_next/image).*)'],
 };

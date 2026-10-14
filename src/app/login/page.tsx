@@ -21,7 +21,7 @@ import {
 
 type AuthMode = 'password' | 'otp';
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const returnUrl = searchParams.get('from') || '/web';
@@ -539,5 +539,22 @@ export default function LoginPage() {
         }}
       />
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <React.Suspense
+      fallback={
+        <div className="min-h-screen bg-[#F4F3EF] flex flex-col items-center justify-center p-4">
+          <div className="w-10 h-10 rounded-xl bg-white border border-[#E5E5E5] p-1.5 shadow-sm mb-3">
+            <img src="/favicon.png" alt="Zawr Books" className="w-full h-full object-contain" />
+          </div>
+          <div className="text-xs text-[#666666] font-mono animate-pulse">Initializing Zawr Books session...</div>
+        </div>
+      }
+    >
+      <LoginForm />
+    </React.Suspense>
   );
 }

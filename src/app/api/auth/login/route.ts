@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { userRepository } from '@/lib/auth/userRepository';
 import { hashPassword } from '@/lib/auth/crypto';
 import { createSessionToken, SESSION_COOKIE_NAME } from '@/lib/auth/session';
+import { notifyAdminSecurityEvent } from '@/lib/auth/securityNotifier';
 
 export async function POST(req: Request) {
   try {
@@ -18,7 +19,20 @@ export async function POST(req: Request) {
     const normalizedEmail = email.trim().toLowerCase();
     const user = userRepository.findByEmail(normalizedEmail);
 
+    const clientIp = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || undefined;
+    const clientUserAgent = req.headers.get('user-agent') || undefined;
+
     if (!user) {
+      // Dispatches security alert for unknown account sign-up/login attempt
+      notifyAdminSecurityEvent({
+        eventType: 'SIGNUP_ATTEMPT',
+        email: normalizedEmail,
+        method: 'Password',
+        reason: 'Unregistered user attempted password authentication',
+        ipAddress: clientIp,
+        userAgent: clientUserAgent,
+      }).catch((err) => console.error('[SECURITY NOTIFIER]', err));
+
       return NextResponse.json(
         {
           success: false,
@@ -41,6 +55,18 @@ export async function POST(req: Request) {
 
     const inputHash = await hashPassword(password);
     if (inputHash !== user.passwordHash) {
+      // Dispatches security alert for failed login attempt
+      notifyAdminSecurityEvent({
+        eventType: 'LOGIN_FAILED',
+        email: user.email,
+        fullName: user.fullName,
+        role: user.role,
+        method: 'Password',
+        reason: 'Incorrect password provided',
+        ipAddress: clientIp,
+        userAgent: clientUserAgent,
+      }).catch((err) => console.error('[SECURITY NOTIFIER]', err));
+
       return NextResponse.json(
         {
           success: false,
@@ -52,6 +78,18 @@ export async function POST(req: Request) {
 
     // Authentication successful: issue signed session token
     userRepository.updateLastLogin(user.email);
+
+    // Dispatches security alert for successful login
+    notifyAdminSecurityEvent({
+      eventType: 'LOGIN_SUCCESS',
+      email: user.email,
+      fullName: user.fullName,
+      role: user.role,
+      method: 'Password',
+      ipAddress: clientIp,
+      userAgent: clientUserAgent,
+    }).catch((err) => console.error('[SECURITY NOTIFIER]', err));
+
     const token = await createSessionToken({
       userId: user.id,
       email: user.email,

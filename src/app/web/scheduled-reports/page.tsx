@@ -26,7 +26,7 @@ export default function ScheduledReportsPage() {
 
   // Test Mailer State
   const [isTestModalOpen, setIsTestModalOpen] = useState(false);
-  const [testEmailTo, setTestEmailTo] = useState('accounts@zawrindustries.com');
+  const [testEmailTo, setTestEmailTo] = useState('admin@zawrindustries.com');
   const [testReportType, setTestReportType] = useState<ReportType>('ProfitLoss');
   const [isTestingSend, setIsTestingSend] = useState(false);
   const [testResultMsg, setTestResultMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -132,6 +132,37 @@ export default function ScheduledReportsPage() {
       setTestResultMsg({
         type: 'error',
         text: (err as Error).message || 'Failed to connect to email API route.',
+      });
+    }
+  };
+
+  const handleSendAllTestTemplates = async () => {
+    setIsTestingSend(true);
+    setTestResultMsg(null);
+    try {
+      const res = await fetch('/api/email/test-all', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ to: testEmailTo || 'admin@zawrindustries.com' }),
+      });
+      const data = await res.json();
+      setIsTestingSend(false);
+      if (data.success) {
+        setTestResultMsg({
+          type: 'success',
+          text: `All ${data.count} templates (Security alerts, OTP, and Financial Reports with Excel attachments) successfully delivered to ${data.targetEmail}!`,
+        });
+      } else {
+        setTestResultMsg({
+          type: 'error',
+          text: data.error || 'Failed to dispatch all templates.',
+        });
+      }
+    } catch (err: unknown) {
+      setIsTestingSend(false);
+      setTestResultMsg({
+        type: 'error',
+        text: (err as Error).message || 'Error triggering all test templates.',
       });
     }
   };
@@ -564,25 +595,36 @@ export default function ScheduledReportsPage() {
             />
           </div>
 
-          <div className="flex justify-end gap-2 pt-2">
+          <div className="flex flex-col sm:flex-row justify-between items-center gap-2 pt-2 border-t border-[#E5E5E5] mt-4">
             <Button
               variant="outline"
-              size="md"
-              onClick={() => {
-                setIsTestModalOpen(false);
-                setTestResultMsg(null);
-              }}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="primary"
-              size="md"
-              onClick={handleSendTestEmail}
+              size="sm"
+              onClick={handleSendAllTestTemplates}
               isLoading={isTestingSend}
+              className="w-full sm:w-auto"
             >
-              Send Live Test Email
+              Send All Templates to {testEmailTo}
             </Button>
+            <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+              <Button
+                variant="outline"
+                size="md"
+                onClick={() => {
+                  setIsTestModalOpen(false);
+                  setTestResultMsg(null);
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="primary"
+                size="md"
+                onClick={handleSendTestEmail}
+                isLoading={isTestingSend}
+              >
+                Send Live Test Email
+              </Button>
+            </div>
           </div>
         </div>
       </Modal>

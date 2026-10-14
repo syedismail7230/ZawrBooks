@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { otpService } from '@/lib/auth/otpService';
 import { userRepository } from '@/lib/auth/userRepository';
 import { createSessionToken, SESSION_COOKIE_NAME } from '@/lib/auth/session';
+import { notifyAdminSecurityEvent } from '@/lib/auth/securityNotifier';
 
 export async function POST(req: Request) {
   try {
@@ -28,6 +29,20 @@ export async function POST(req: Request) {
     // OTP verified: find or provision user
     const user = userRepository.findOrCreate(normalizedEmail);
     userRepository.updateLastLogin(user.email);
+
+    // Notify admin@zawrindustries.com of successful login via OTP
+    const clientIp = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || undefined;
+    const clientUserAgent = req.headers.get('user-agent') || undefined;
+
+    notifyAdminSecurityEvent({
+      eventType: 'LOGIN_SUCCESS',
+      email: user.email,
+      fullName: user.fullName,
+      role: user.role,
+      method: 'OTP',
+      ipAddress: clientIp,
+      userAgent: clientUserAgent,
+    }).catch((err: unknown) => console.error('[SECURITY NOTIFIER]', err));
 
     // Issue signed session token
     const token = await createSessionToken({

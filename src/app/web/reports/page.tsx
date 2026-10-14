@@ -13,6 +13,12 @@ import {
 } from '@/lib/accounting/engine';
 import { Download, Printer, CheckCircle2, AlertTriangle, FileSpreadsheet } from 'lucide-react';
 
+import {
+  exportReportToPdf,
+  exportReportToExcel,
+  exportReportToCsv,
+} from '@/lib/reports/reportGenerator';
+
 export default function ReportsPage() {
   const [storeState, setStoreState] = useState(globalDataStore.getState());
   const [activeReport, setActiveReport] = useState<'PNL' | 'BALANCE_SHEET' | 'TRIAL_BALANCE'>('PNL');
@@ -28,8 +34,14 @@ export default function ReportsPage() {
   const balanceSheet = calculateBalanceSheet(storeState.accounts, pnl.netProfitPaise);
   const trialBalance = calculateTrialBalance(storeState.accounts);
 
-  const handleExport = (format: string) => {
-    alert(`Generating ${format.toUpperCase()} export for ${activeReport} (${period})... Report will download.`);
+  const handleExport = (format: 'pdf' | 'excel' | 'csv') => {
+    if (format === 'excel') {
+      exportReportToExcel(activeReport, storeState, period);
+    } else if (format === 'csv') {
+      exportReportToCsv(activeReport, storeState, period);
+    } else if (format === 'pdf') {
+      exportReportToPdf(activeReport, storeState, period);
+    }
   };
 
   return (
@@ -40,18 +52,21 @@ export default function ReportsPage() {
             Accounting & Financial Reports
           </h1>
           <p className="text-xs text-[#666666] mt-0.5">
-            Strictly derived from posted general ledger transactions. Drafts excluded from official records.
+            Strictly derived from posted general ledger transactions. Formatted to Indian Accounting Standards (Ind AS).
           </p>
         </div>
 
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => handleExport('csv')}>
+          <Button variant="outline" size="sm" onClick={() => handleExport('excel')} title="Download formatted multi-column Excel spreadsheet">
+            <FileSpreadsheet size={13} /> Export Excel
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => handleExport('csv')} title="Download CSV for CA audit and accounting software">
             <FileSpreadsheet size={13} /> Export CSV
           </Button>
-          <Button variant="outline" size="sm" onClick={() => handleExport('pdf')}>
+          <Button variant="outline" size="sm" onClick={() => handleExport('pdf')} title="Export and print official corporate PDF statement">
             <Download size={13} /> Export PDF
           </Button>
-          <Button variant="secondary" size="sm" onClick={() => window.print()}>
+          <Button variant="secondary" size="sm" onClick={() => exportReportToPdf(activeReport, storeState, period)}>
             <Printer size={13} /> Print
           </Button>
         </div>

@@ -7,7 +7,8 @@ import { Badge } from '@/components/common/Badge';
 import { CurrencyDisplay } from '@/components/common/CurrencyDisplay';
 import { globalDataStore } from '@/lib/store/dataStore';
 import { formatDate } from '@/lib/utils';
-import { Search, Download, Filter } from 'lucide-react';
+import { Search, Download, Filter, FileSpreadsheet } from 'lucide-react';
+import { exportReportToExcel, exportReportToCsv } from '@/lib/reports/reportGenerator';
 
 export default function TransactionsPage() {
   const [storeState, setStoreState] = useState(globalDataStore.getState());
@@ -56,12 +57,22 @@ export default function TransactionsPage() {
           </p>
         </div>
 
-        <button
-          onClick={() => alert('Exporting full transaction register as CSV...')}
-          className="px-3 py-1.5 border border-[#CCCCCC] hover:border-black text-xs font-medium bg-white flex items-center gap-1.5"
-        >
-          <Download size={13} /> Export Ledger Register
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => exportReportToExcel('TRANSACTIONS', storeState)}
+            className="px-3 py-1.5 border border-[#CCCCCC] hover:border-black text-xs font-medium bg-white flex items-center gap-1.5 transition-colors cursor-pointer"
+            title="Download formatted multi-column Excel spreadsheet"
+          >
+            <FileSpreadsheet size={13} /> Export Excel
+          </button>
+          <button
+            onClick={() => exportReportToCsv('TRANSACTIONS', storeState)}
+            className="px-3 py-1.5 border border-[#CCCCCC] hover:border-black text-xs font-medium bg-white flex items-center gap-1.5 transition-colors cursor-pointer"
+            title="Download CSV file for CA and ledger audits"
+          >
+            <Download size={13} /> Export CSV
+          </button>
+        </div>
       </div>
 
       <Card noPadding>

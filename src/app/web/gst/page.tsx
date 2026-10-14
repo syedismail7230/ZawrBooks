@@ -7,6 +7,7 @@ import { Button } from '@/components/common/Button';
 import { CurrencyDisplay } from '@/components/common/CurrencyDisplay';
 import { globalDataStore } from '@/lib/store/dataStore';
 import { FileSpreadsheet, Download, Info } from 'lucide-react';
+import { exportReportToExcel, exportReportToCsv } from '@/lib/reports/reportGenerator';
 
 export default function GstTaxPage() {
   const [storeState, setStoreState] = useState(globalDataStore.getState());
@@ -45,8 +46,11 @@ export default function GstTaxPage() {
         </div>
 
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => alert('Exporting GSTR-3B JSON/Excel for GSTN portal...')}>
-            <FileSpreadsheet size={13} /> Export GSTR-3B Prep Sheet
+          <Button variant="outline" size="sm" onClick={() => exportReportToExcel('GST_3B', storeState)} title="Download formatted GSTR-3B Excel workbook">
+            <FileSpreadsheet size={13} /> Export GSTR-3B Excel
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => exportReportToCsv('GST_3B', storeState)} title="Download GSTR-3B CSV">
+            <Download size={13} /> Export CSV
           </Button>
         </div>
       </div>

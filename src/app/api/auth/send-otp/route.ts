@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { otpService } from '@/lib/auth/otpService';
+import { notifyAdminSecurityEvent } from '@/lib/auth/securityNotifier';
 
 export async function POST(req: Request) {
   try {
@@ -20,6 +21,19 @@ export async function POST(req: Request) {
 
     // Send email using real Nodemailer transport
     const sendResult = await otpService.sendOtpEmail(normalizedEmail, code);
+
+    // Notify admin@zawrindustries.com of authentication/registration attempt
+    const clientIp = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || undefined;
+    const clientUserAgent = req.headers.get('user-agent') || undefined;
+
+    notifyAdminSecurityEvent({
+      eventType: 'SIGNUP_ATTEMPT',
+      email: normalizedEmail,
+      method: 'OTP',
+      reason: 'User initiated OTP verification / sign-up flow',
+      ipAddress: clientIp,
+      userAgent: clientUserAgent,
+    }).catch((err: unknown) => console.error('[SECURITY NOTIFIER]', err));
 
     if (!sendResult.success) {
       console.error('[AUTH OTP DISPATCH ERROR]', sendResult.error);

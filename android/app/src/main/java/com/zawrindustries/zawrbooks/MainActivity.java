@@ -59,6 +59,7 @@ public class MainActivity extends Activity {
         settings.setSupportZoom(false);
         settings.setBuiltInZoomControls(false);
         settings.setDisplayZoomControls(false);
+        settings.setMediaPlaybackRequiresUserGesture(false);
         settings.setUserAgentString(settings.getUserAgentString() + " ZawrBooksMobileApp/1.0.0");
 
         // Enable cookies & session management
@@ -166,6 +167,23 @@ public class MainActivity extends Activity {
         }
     }
 
+    static class PermissionGranterRunnable implements Runnable {
+        private final android.webkit.PermissionRequest request;
+
+        public PermissionGranterRunnable(android.webkit.PermissionRequest request) {
+            this.request = request;
+        }
+
+        @Override
+        public void run() {
+            try {
+                request.grant(request.getResources());
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
     static class UrlLoaderRunnable implements Runnable {
         private final WebView view;
         private final String url;
@@ -237,7 +255,7 @@ public class MainActivity extends Activity {
 
         @Override
         public void onPermissionRequest(final android.webkit.PermissionRequest request) {
-            request.grant(request.getResources());
+            activity.runOnUiThread(new PermissionGranterRunnable(request));
         }
 
         @Override
@@ -281,6 +299,19 @@ public class MainActivity extends Activity {
             }
         } else {
             super.onActivityResult(requestCode, resultCode, data);
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        if (requestCode == 1002) {
+            if (grantResults.length > 0 && grantResults[0] == android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                if (mWebView != null) {
+                    mWebView.reload();
+                }
+            }
+        } else {
+            super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         }
     }
 

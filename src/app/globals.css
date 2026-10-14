@@ -72,3 +72,43 @@ body {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+/* Full-Screen Camera Scanner Laser Animations */
+@keyframes scanLaserAnim {
+  0% {
+    top: 6%;
+    opacity: 0.8;
+  }
+  50% {
+    top: 92%;
+    opacity: 1;
+  }
+  100% {
+    top: 6%;
+    opacity: 0.8;
+  }
+}
+
+@keyframes scanAuraAnim {
+  0% {
+    top: 0%;
+    opacity: 0.2;
+  }
+  50% {
+    top: 80%;
+    opacity: 0.55;
+  }
+  100% {
+    top: 0%;
+    opacity: 0.2;
+  }
+}
+
+.animate-scan-beam {
+  animation: scanLaserAnim 2.6s ease-in-out infinite;
+}
+
+.animate-scan-aura {
+  animation: scanAuraAnim 2.6s ease-in-out infinite;
+}
+

@@ -28,6 +28,9 @@ import {
   ZapOff,
   ImageIcon,
   AlertTriangle,
+  X,
+  Home,
+  Scan,
 } from 'lucide-react';
 import Tesseract from 'tesseract.js';
 
@@ -112,27 +115,53 @@ export const ReceiptScannerModal: React.FC<ReceiptScannerModalProps> = ({
     setCameraError(null);
 
     if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) {
-      setCameraError('Live camera is not supported in this browser environment. You can upload an image from your gallery or choose a file below.');
+      setCameraError('Live camera stream is not supported in this browser environment. Tap below to capture via device camera.');
       setIsCameraStarting(false);
       return;
     }
 
     try {
-      const constraints: MediaStreamConstraints = {
-        video: {
-          facingMode: { ideal: mode },
-          width: { ideal: 1920 },
-          height: { ideal: 1080 },
-        },
-        audio: false,
-      };
+      let stream: MediaStream | null = null;
+      const targetFacing = mode === 'user' ? 'user' : 'environment';
 
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      // Tier 1: Ideal facingMode without hardcoded width/height (avoids Android portrait OverconstrainedError)
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: targetFacing } },
+          audio: false,
+        });
+      } catch (err1) {
+        console.warn('Tier 1 camera init failed, trying direct facingMode:', err1);
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: targetFacing },
+            audio: false,
+          });
+        } catch (err2) {
+          console.warn('Tier 2 camera init failed, trying generic video:', err2);
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: true,
+            audio: false,
+          });
+        }
+      }
+
+      if (!stream) {
+        throw new Error('No camera stream obtained');
+      }
+
       streamRef.current = stream;
 
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
-        await videoRef.current.play().catch(() => {});
+        videoRef.current.setAttribute('playsinline', 'true');
+        videoRef.current.setAttribute('webkit-playsinline', 'true');
+        videoRef.current.muted = true;
+        try {
+          await videoRef.current.play();
+        } catch (playErr) {
+          console.warn('Video play error:', playErr);
+        }
       }
 
       // Check if torch is supported
@@ -143,15 +172,12 @@ export const ReceiptScannerModal: React.FC<ReceiptScannerModalProps> = ({
       }
 
       setIsCameraActive(true);
+      setCameraError(null);
     } catch (err: any) {
       console.warn('Camera access error:', err);
-      let msg = 'Unable to access camera. Please allow camera permissions or upload from gallery below.';
+      let msg = 'Camera access was not granted. Tap below to open camera or choose from gallery.';
       if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-        msg = 'Camera permission was denied. Please grant camera permission in your settings, or upload a photo from your gallery below.';
-      } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
-        msg = 'No camera device found on this system. Please upload a receipt from your gallery or files below.';
-      } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
-        msg = 'Camera is currently busy or in use by another app. Please close other camera apps and retry, or choose from gallery.';
+        msg = 'Camera permission was denied. Tap below to use device camera or choose from gallery.';
       }
       setCameraError(msg);
       setIsCameraActive(false);
@@ -202,6 +228,15 @@ export const ReceiptScannerModal: React.FC<ReceiptScannerModalProps> = ({
     const name = `camera-scan-${timestamp}.jpg`;
     setFileName(name);
     runOcr(dataUrl, name);
+  };
+
+  const handleShutterClick = () => {
+    if (isCameraActive && videoRef.current) {
+      capturePhoto();
+    } else {
+      // Direct native device camera capture intent
+      cameraInputRef.current?.click();
+    }
   };
 
   // Automatically start camera when modal opens at Step 1
@@ -384,17 +419,10 @@ export const ReceiptScannerModal: React.FC<ReceiptScannerModalProps> = ({
     onClose();
   };
 
+  if (!isOpen) return null;
+
   return (
-    <Modal
-      isOpen={isOpen}
-      onClose={() => {
-        resetState();
-        onClose();
-      }}
-      title="AI Receipt & Invoice Scanner"
-      subtitle="Optical text extraction with Indian GST verification and ledger reconciliation"
-      maxWidth="4xl"
-    >
+    <>
       {/* Hidden Canvas for High-Resolution Camera Capture */}
       <canvas ref={canvasRef} className="hidden" />
 
@@ -415,190 +443,173 @@ export const ReceiptScannerModal: React.FC<ReceiptScannerModalProps> = ({
         onChange={handleFileUpload}
       />
 
-      {/* Step 1: Live Camera Viewfinder with Option Below to Upload from Gallery */}
+      {/* STEP 1: Full-Screen Immersive Camera Scanner (Matches Image 2 exactly!) */}
       {step === 1 && (
-        <div
-          onDragOver={(e) => {
-            e.preventDefault();
-            setIsDragOver(true);
-          }}
-          onDragLeave={() => setIsDragOver(false)}
-          onDrop={handleDrop}
-          className="max-w-xl mx-auto space-y-3"
-        >
-          {/* Camera Viewfinder Box */}
-          <div className="bg-[#111111] border border-black relative overflow-hidden shadow-md">
-            {/* Camera Toolbar / Status */}
-            <div className="flex items-center justify-between px-3 py-2 bg-black/80 border-b border-white/10 text-white z-20 relative">
-              <div className="flex items-center gap-2">
-                <span className="relative flex h-2 w-2">
-                  <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${isCameraActive ? 'bg-emerald-400' : 'bg-amber-400'}`}></span>
-                  <span className={`relative inline-flex rounded-full h-2 w-2 ${isCameraActive ? 'bg-emerald-500' : 'bg-amber-500'}`}></span>
-                </span>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-gray-200">
-                  {isCameraActive ? 'Live Camera Scanner' : isCameraStarting ? 'Connecting Camera...' : 'Camera Viewfinder'}
-                </span>
-              </div>
+        <div className="fixed inset-0 z-50 bg-black flex flex-col justify-between overflow-hidden select-none animate-in fade-in duration-200">
+          {/* Live Camera Background Video */}
+          <div className="absolute inset-0 w-full h-full bg-black flex items-center justify-center overflow-hidden">
+            <video
+              ref={videoRef}
+              autoPlay
+              playsInline
+              muted
+              className={`w-full h-full object-cover transition-opacity duration-300 ${
+                isCameraActive ? 'opacity-100' : 'opacity-0'
+              }`}
+            />
+          </div>
 
-              <div className="flex items-center gap-1">
-                {hasTorch && (
-                  <button
-                    type="button"
-                    onClick={toggleTorch}
-                    className={`p-1.5 rounded-none text-xs transition-colors ${
-                      isTorchOn ? 'bg-amber-400 text-black' : 'text-gray-300 hover:text-white hover:bg-white/10'
-                    }`}
-                    title={isTorchOn ? 'Turn Flashlight Off' : 'Turn Flashlight On'}
-                  >
-                    {isTorchOn ? <Zap size={14} /> : <ZapOff size={14} />}
-                  </button>
-                )}
+          {/* Top Controls Bar (Safe area aware) */}
+          <div className="relative z-20 flex items-center justify-between px-5 pt-[max(1.2rem,env(safe-area-inset-top))]">
+            {/* Close Button (Left) */}
+            <button
+              type="button"
+              onClick={() => {
+                stopCamera();
+                onClose();
+              }}
+              className="w-11 h-11 rounded-full bg-black/60 backdrop-blur-md border border-white/20 text-white flex items-center justify-center hover:bg-black/80 active:scale-95 transition-all shadow-lg cursor-pointer"
+              title="Close Scanner"
+            >
+              <X size={20} />
+            </button>
+
+            {/* Right Tools (Torch & Camera Switch) */}
+            <div className="flex items-center gap-2.5">
+              {hasTorch && (
                 <button
                   type="button"
-                  onClick={switchCamera}
-                  disabled={isCameraStarting}
-                  className="p-1.5 text-gray-300 hover:text-white hover:bg-white/10 rounded-none text-xs transition-colors"
-                  title="Switch Front / Rear Camera"
+                  onClick={toggleTorch}
+                  className={`w-11 h-11 rounded-full backdrop-blur-md border border-white/20 flex items-center justify-center active:scale-95 transition-all shadow-lg cursor-pointer ${
+                    isTorchOn ? 'bg-amber-400 text-black' : 'bg-black/60 text-white hover:bg-black/80'
+                  }`}
+                  title={isTorchOn ? 'Turn Flashlight Off' : 'Turn Flashlight On'}
                 >
-                  <SwitchCamera size={14} />
+                  {isTorchOn ? <Zap size={18} /> : <ZapOff size={18} />}
                 </button>
-                <button
-                  type="button"
-                  onClick={() => startCamera()}
-                  disabled={isCameraStarting}
-                  className="p-1.5 text-gray-300 hover:text-white hover:bg-white/10 rounded-none text-xs transition-colors"
-                  title="Restart Camera"
-                >
-                  <RefreshCw size={14} className={isCameraStarting ? 'animate-spin' : ''} />
-                </button>
-              </div>
-            </div>
-
-            {/* Video Viewport Area */}
-            <div className="relative w-full h-[320px] sm:h-[390px] bg-black flex items-center justify-center overflow-hidden">
-              {/* The Live Video Element */}
-              <video
-                ref={videoRef}
-                autoPlay
-                playsInline
-                muted
-                className={`w-full h-full object-cover transition-opacity duration-300 ${
-                  isCameraActive ? 'opacity-100' : 'opacity-0'
-                }`}
-              />
-
-              {/* Viewfinder Target Framing Brackets */}
-              {isCameraActive && (
-                <div className="absolute inset-4 sm:inset-6 pointer-events-none z-10 flex flex-col justify-between">
-                  <div className="flex justify-between items-start">
-                    <div className="w-8 h-8 border-t-2 border-l-2 border-white drop-shadow"></div>
-                    <div className="w-8 h-8 border-t-2 border-r-2 border-white drop-shadow"></div>
-                  </div>
-
-                  {/* Center Guidance Prompt */}
-                  <div className="text-center my-auto">
-                    <div className="inline-block px-3 py-1 bg-black/60 backdrop-blur-xs border border-white/20 text-white text-[10px] font-mono tracking-widest uppercase">
-                      Position Receipt Inside Frame
-                    </div>
-                  </div>
-
-                  <div className="flex justify-between items-end">
-                    <div className="w-8 h-8 border-b-2 border-l-2 border-white drop-shadow"></div>
-                    <div className="w-8 h-8 border-b-2 border-r-2 border-white drop-shadow"></div>
-                  </div>
-                </div>
               )}
+              <button
+                type="button"
+                onClick={switchCamera}
+                className="w-11 h-11 rounded-full bg-black/60 backdrop-blur-md border border-white/20 text-white flex items-center justify-center hover:bg-black/80 active:scale-95 transition-all shadow-lg cursor-pointer"
+                title="Switch Front / Rear Camera"
+              >
+                <SwitchCamera size={18} />
+              </button>
+            </div>
+          </div>
 
-              {/* Loading / Starting Camera State */}
+          {/* Center Viewfinder Framing (Matches Image 2!) */}
+          <div className="relative z-10 flex flex-col items-center justify-center px-6 my-auto">
+            {/* Rounded Rectangle Viewfinder Frame */}
+            <div className="w-[82vw] max-w-[340px] aspect-[3/4] border-2 border-white/90 rounded-3xl relative overflow-hidden shadow-2xl backdrop-contrast-105">
+              {/* Animated Glowing Laser Scanning Beam */}
+              <div className="absolute inset-x-0 h-1 bg-gradient-to-r from-transparent via-purple-400 to-transparent shadow-[0_0_18px_rgba(168,85,247,0.9)] animate-scan-beam" />
+              <div className="absolute inset-x-0 h-20 bg-gradient-to-b from-purple-500/20 to-transparent pointer-events-none animate-scan-aura" />
+
+              {/* Corner Bracket Accents */}
+              <div className="absolute top-2.5 left-2.5 w-6 h-6 border-t-2 border-l-2 border-white rounded-tl-sm pointer-events-none" />
+              <div className="absolute top-2.5 right-2.5 w-6 h-6 border-t-2 border-r-2 border-white rounded-tr-sm pointer-events-none" />
+              <div className="absolute bottom-2.5 left-2.5 w-6 h-6 border-b-2 border-l-2 border-white rounded-bl-sm pointer-events-none" />
+              <div className="absolute bottom-2.5 right-2.5 w-6 h-6 border-b-2 border-r-2 border-white rounded-br-sm pointer-events-none" />
+
+              {/* State if starting */}
               {isCameraStarting && (
-                <div className="absolute inset-0 bg-black/90 flex flex-col items-center justify-center text-white gap-2.5 z-20">
-                  <div className="w-8 h-8 border-2 border-white border-t-transparent animate-spin rounded-full"></div>
-                  <span className="text-xs font-semibold tracking-wider uppercase text-gray-200">
-                    Opening Camera...
+                <div className="absolute inset-0 bg-black/75 flex flex-col items-center justify-center text-white gap-2 z-10">
+                  <div className="w-8 h-8 border-2 border-purple-400 border-t-transparent animate-spin rounded-full" />
+                  <span className="text-[11px] font-medium tracking-wider uppercase text-gray-200">
+                    Starting Camera...
                   </span>
                 </div>
               )}
 
-              {/* Camera Error / Permission Fallback View */}
-              {cameraError && !isCameraStarting && (
-                <div className="absolute inset-0 bg-[#FAFAF9] p-6 flex flex-col items-center justify-center text-center space-y-3 z-20">
-                  <div className="p-3 bg-amber-50 border border-amber-200 rounded-full text-amber-700">
-                    <AlertTriangle size={28} />
+              {/* State if camera permission failed or not active */}
+              {!isCameraActive && !isCameraStarting && (
+                <div className="absolute inset-0 bg-black/80 p-5 flex flex-col items-center justify-center text-center text-white space-y-3 z-10">
+                  <div className="p-3 bg-white/10 rounded-full border border-white/20">
+                    <Camera size={26} className="text-purple-300" />
                   </div>
                   <div>
-                    <h5 className="text-xs font-bold uppercase tracking-wider text-[#111111]">
-                      Camera Access Needed
-                    </h5>
-                    <p className="text-xs text-[#666666] mt-1 max-w-sm mx-auto">
-                      {cameraError}
-                    </p>
+                    <div className="text-xs font-bold uppercase tracking-wider text-white">
+                      Tap Shutter To Scan
+                    </div>
+                    <div className="text-[11px] text-gray-300 mt-1 max-w-[200px]">
+                      Opens device camera directly or pick from gallery below
+                    </div>
                   </div>
-                  <div className="flex flex-wrap gap-2 justify-center pt-1">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => startCamera()}
-                    >
-                      <RefreshCw size={13} /> Try Again
-                    </Button>
-                    <Button
-                      variant="primary"
-                      size="sm"
-                      onClick={() => cameraInputRef.current?.click()}
-                    >
-                      <Camera size={13} /> Open Camera App
-                    </Button>
-                  </div>
-                </div>
-              )}
-
-              {/* Shutter Capture Button */}
-              {isCameraActive && (
-                <div className="absolute bottom-3.5 inset-x-0 flex items-center justify-center z-30">
                   <button
                     type="button"
-                    onClick={capturePhoto}
-                    className="group flex items-center gap-2.5 px-6 py-2.5 bg-white text-black hover:bg-[#F4F3EF] active:scale-95 transition-all shadow-xl font-bold text-xs uppercase tracking-wider border border-white cursor-pointer"
+                    onClick={() => startCamera()}
+                    className="px-3.5 py-1.5 bg-white/20 hover:bg-white/30 text-white rounded-full text-[10px] font-bold uppercase tracking-wider transition-colors cursor-pointer"
                   >
-                    <span className="relative flex h-3 w-3">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-600"></span>
-                    </span>
-                    <Camera size={16} className="text-black" />
-                    <span>Capture Receipt</span>
+                    Retry Live Cam
                   </button>
                 </div>
               )}
             </div>
+
+            {/* Status Pill below Frame (Matches Image 2!) */}
+            <div className="mt-4 px-4 py-1.5 rounded-full bg-black/60 backdrop-blur-md border border-white/20 text-white text-[11px] font-medium flex items-center gap-2 shadow-lg">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-purple-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-purple-500"></span>
+              </span>
+              <span>Align receipt inside frame</span>
+            </div>
           </div>
 
-          {/* Option Below to Upload from Gallery / Photos */}
-          <div className="space-y-2 pt-1">
-            <div className="relative flex py-1 items-center">
-              <div className="flex-grow border-t border-[#E5E5E5]"></div>
-              <span className="flex-shrink mx-3 text-[10px] font-bold tracking-widest uppercase text-[#888888]">
-                Or Upload Existing Receipt
-              </span>
-              <div className="flex-grow border-t border-[#E5E5E5]"></div>
-            </div>
+          {/* Bottom Floating Pill Dock (Matches Image 2!) */}
+          <div className="relative z-20 px-6 pb-[max(1.8rem,env(safe-area-inset-bottom))] flex items-center justify-center">
+            <div className="bg-[#18181B]/95 backdrop-blur-2xl border border-white/15 rounded-full px-8 py-3.5 flex items-center gap-9 shadow-2xl">
+              {/* Left: Home / Close */}
+              <button
+                type="button"
+                onClick={() => {
+                  stopCamera();
+                  onClose();
+                }}
+                className="p-2 text-gray-300 hover:text-white active:scale-90 transition-transform cursor-pointer"
+                title="Return to Home"
+              >
+                <Home size={22} />
+              </button>
 
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              className="w-full py-3.5 px-4 bg-white hover:bg-[#F4F3EF] border-2 border-dashed border-[#CCCCCC] hover:border-black transition-all flex items-center justify-center gap-2.5 text-xs font-bold uppercase tracking-wider text-[#111111] shadow-2xs group cursor-pointer"
-            >
-              <ImageIcon size={18} className="text-[#555555] group-hover:text-black transition-colors" />
-              <span>Upload from Gallery / Photos</span>
-            </button>
+              {/* Center: Large Glowing Purple Shutter Button */}
+              <button
+                type="button"
+                onClick={handleShutterClick}
+                className="w-16 h-16 -my-4 rounded-full bg-gradient-to-tr from-[#6366F1] to-[#8B5CF6] text-white shadow-[0_0_25px_rgba(139,92,246,0.7)] flex items-center justify-center active:scale-90 hover:scale-105 transition-all cursor-pointer border-2 border-white/30"
+                title="Capture / Scan Receipt"
+              >
+                <Scan size={28} className="stroke-[2.5]" />
+              </button>
 
-            <div className="text-[11px] text-center text-[#888888] flex items-center justify-center gap-2">
-              <span>Supports JPG, PNG, WEBP, and PDF invoices</span>
-              <span>&bull;</span>
-              <span>Drag & drop supported</span>
+              {/* Right: Gallery Upload */}
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="p-2 text-gray-300 hover:text-white active:scale-90 transition-transform cursor-pointer"
+                title="Upload from Photo Gallery"
+              >
+                <ImageIcon size={22} />
+              </button>
             </div>
           </div>
         </div>
       )}
+
+      {/* STEP 2 & 3: Review Modal */}
+      {(step === 2 || step === 3) && (
+        <Modal
+          isOpen={isOpen}
+          onClose={() => {
+            resetState();
+            onClose();
+          }}
+          title={step === 2 ? 'Analyzing Financial Document' : 'Review & Confirm Receipt'}
+          subtitle="Optical text extraction with Indian GST verification and ledger reconciliation"
+          maxWidth="4xl"
+        >
 
       {/* Step 2: OCR Scanning in progress with live status */}
       {step === 2 && (
@@ -916,7 +927,9 @@ export const ReceiptScannerModal: React.FC<ReceiptScannerModalProps> = ({
           </div>
         </div>
       )}
-    </Modal>
+        </Modal>
+      )}
+    </>
   );
 };
 

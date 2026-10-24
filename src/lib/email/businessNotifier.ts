@@ -39,6 +39,78 @@ function formatShortDate(dateStr?: string): string {
   });
 }
 
+function renderBusinessEmailHead(title: string): string {
+  return `
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="x-apple-disable-message-reformatting">
+  <meta name="format-detection" content="telephone=no, date=no, address=no, email=no">
+  <title>${title}</title>
+  <style>
+    /* Global Reset */
+    html, body {
+      margin: 0 !important;
+      padding: 0 !important;
+      height: 100% !important;
+      width: 100% !important;
+      -webkit-text-size-adjust: 100%;
+      -ms-text-size-adjust: 100%;
+    }
+    table, td {
+      mso-table-lspace: 0pt;
+      mso-table-rspace: 0pt;
+    }
+    img {
+      -ms-interpolation-mode: bicubic;
+      border: 0;
+      outline: none;
+      text-decoration: none;
+    }
+
+    /* Mobile Responsive Breakpoints */
+    @media only screen and (max-width: 600px) {
+      .email-outer-body {
+        padding: 10px 6px !important;
+      }
+      .email-container {
+        padding: 20px 14px !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        border-radius: 6px !important;
+        box-sizing: border-box !important;
+      }
+      .email-header-banner {
+        padding: 16px 14px !important;
+      }
+      .email-body-content {
+        padding: 20px 14px !important;
+      }
+      .email-title-lg {
+        font-size: 18px !important;
+      }
+      .email-meta-col-label {
+        width: 40% !important;
+        font-size: 11.5px !important;
+        padding: 8px 10px !important;
+      }
+      .email-meta-col-val {
+        font-size: 12px !important;
+        padding: 8px 10px !important;
+      }
+      .email-action-btn {
+        display: block !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+        padding: 12px 14px !important;
+        text-align: center !important;
+      }
+    }
+  </style>
+</head>`;
+}
+
 // -------------------------------------------------------------
 // 1. Customer Tax Invoice Dispatch
 // -------------------------------------------------------------
@@ -113,19 +185,23 @@ export async function sendCustomerInvoiceEmail(params: SendInvoiceEmailParams) {
 
   const htmlContent = `
 <!DOCTYPE html>
-<html>
-<head><meta charset="utf-8"></head>
-<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background: #f4f3ef; margin: 0; padding: 24px 16px; color: #111;">
-  <div style="max-width: 640px; margin: 0 auto; background: #fff; border-radius: 8px; border: 1px solid #e0dfd5; overflow: hidden; box-shadow: 0 4px 16px rgba(0,0,0,0.05);">
-    <div style="background: #111; color: #fff; padding: 24px 32px; display: flex; justify-content: space-between; align-items: center;">
-      <div>
-        <span style="font-size: 10px; font-weight: 700; color: #10B981; letter-spacing: 1.5px; text-transform: uppercase;">GST TAX INVOICE</span>
-        <h1 style="margin: 4px 0 0; font-size: 22px; font-weight: 800; letter-spacing: 0.5px;">ZAWR INDUSTRIES</h1>
-        <p style="margin: 2px 0 0; font-size: 11px; color: #888;">GSTIN: 29AAAAZ0000A1Z5 | PAN: AAAAZ0000A</p>
-      </div>
+<html lang="en">
+${renderBusinessEmailHead('GST Tax Invoice — Zawr Industries')}
+<body class="email-outer-body" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background: #f4f3ef; margin: 0; padding: 24px 16px; color: #111; -webkit-font-smoothing: antialiased;">
+  <div class="email-container" style="max-width: 640px; width: 100%; margin: 0 auto; background: #fff; border-radius: 8px; border: 1px solid #e0dfd5; overflow: hidden; box-shadow: 0 4px 16px rgba(0,0,0,0.05); box-sizing: border-box;">
+    <div class="email-header-banner" style="background: #111; color: #fff; padding: 24px 32px;">
+      <table role="presentation" width="100%" border="0" cellpadding="0" cellspacing="0" style="width: 100%; border-collapse: collapse;">
+        <tr>
+          <td valign="middle" align="left">
+            <span style="font-size: 10px; font-weight: 700; color: #10B981; letter-spacing: 1.5px; text-transform: uppercase;">GST TAX INVOICE</span>
+            <h1 class="email-title-lg" style="margin: 4px 0 0; font-size: 22px; font-weight: 800; letter-spacing: 0.5px; color: #ffffff;">ZAWR INDUSTRIES</h1>
+            <p style="margin: 2px 0 0; font-size: 11px; color: #888;">GSTIN: 29AAAAZ0000A1Z5 | PAN: AAAAZ0000A</p>
+          </td>
+        </tr>
+      </table>
     </div>
 
-    <div style="padding: 32px;">
+    <div class="email-body-content" style="padding: 32px; box-sizing: border-box;">
       <p style="margin: 0 0 16px; font-size: 14px; color: #333;">Dear <strong>${invoice.customerName}</strong>,</p>
       <p style="margin: 0 0 24px; font-size: 13px; color: #555; line-height: 1.6;">
         Please find your official GST Tax Invoice <strong>${invoice.invoiceNumber}</strong> issued on ${formatShortDate(invoice.invoiceDate)}. The full itemized Excel spreadsheet is attached.
@@ -134,28 +210,28 @@ export async function sendCustomerInvoiceEmail(params: SendInvoiceEmailParams) {
       <!-- Invoice Summary Card -->
       <table width="100%" cellpadding="0" cellspacing="0" style="background: #fafaf9; border: 1px solid #ebebeb; border-radius: 6px; font-size: 12px; margin-bottom: 24px;">
         <tr>
-          <td style="padding: 10px 16px; border-bottom: 1px solid #eee; font-weight: 700; color: #666; width: 35%;">Invoice Number</td>
-          <td style="padding: 10px 16px; border-bottom: 1px solid #eee; font-weight: 800; font-family: monospace;">${invoice.invoiceNumber}</td>
+          <td class="email-meta-col-label" style="padding: 10px 16px; border-bottom: 1px solid #eee; font-weight: 700; color: #666; width: 35%;">Invoice Number</td>
+          <td class="email-meta-col-val" style="padding: 10px 16px; border-bottom: 1px solid #eee; font-weight: 800; font-family: monospace;">${invoice.invoiceNumber}</td>
         </tr>
         <tr>
-          <td style="padding: 10px 16px; border-bottom: 1px solid #eee; font-weight: 700; color: #666;">Invoice Date</td>
-          <td style="padding: 10px 16px; border-bottom: 1px solid #eee;">${formatShortDate(invoice.invoiceDate)}</td>
+          <td class="email-meta-col-label" style="padding: 10px 16px; border-bottom: 1px solid #eee; font-weight: 700; color: #666;">Invoice Date</td>
+          <td class="email-meta-col-val" style="padding: 10px 16px; border-bottom: 1px solid #eee;">${formatShortDate(invoice.invoiceDate)}</td>
         </tr>
         <tr>
-          <td style="padding: 10px 16px; border-bottom: 1px solid #eee; font-weight: 700; color: #666;">Payment Due Date</td>
-          <td style="padding: 10px 16px; border-bottom: 1px solid #eee; font-weight: 700; color: #c5221f;">${formatShortDate(invoice.dueDate)}</td>
+          <td class="email-meta-col-label" style="padding: 10px 16px; border-bottom: 1px solid #eee; font-weight: 700; color: #666;">Payment Due Date</td>
+          <td class="email-meta-col-val" style="padding: 10px 16px; border-bottom: 1px solid #eee; font-weight: 700; color: #c5221f;">${formatShortDate(invoice.dueDate)}</td>
         </tr>
         <tr>
-          <td style="padding: 10px 16px; border-bottom: 1px solid #eee; font-weight: 700; color: #666;">Taxable Amount</td>
-          <td style="padding: 10px 16px; border-bottom: 1px solid #eee;">${formatINR(invoice.subtotalPaise)}</td>
+          <td class="email-meta-col-label" style="padding: 10px 16px; border-bottom: 1px solid #eee; font-weight: 700; color: #666;">Taxable Amount</td>
+          <td class="email-meta-col-val" style="padding: 10px 16px; border-bottom: 1px solid #eee;">${formatINR(invoice.subtotalPaise)}</td>
         </tr>
         <tr>
-          <td style="padding: 10px 16px; border-bottom: 1px solid #eee; font-weight: 700; color: #666;">GST Total (CGST + SGST)</td>
-          <td style="padding: 10px 16px; border-bottom: 1px solid #eee;">${formatINR(invoice.totalTaxPaise)}</td>
+          <td class="email-meta-col-label" style="padding: 10px 16px; border-bottom: 1px solid #eee; font-weight: 700; color: #666;">GST Total (CGST + SGST)</td>
+          <td class="email-meta-col-val" style="padding: 10px 16px; border-bottom: 1px solid #eee;">${formatINR(invoice.totalTaxPaise)}</td>
         </tr>
         <tr style="background: #e6f4ea;">
-          <td style="padding: 12px 16px; font-weight: 800; color: #137333; font-size: 13px;">Grand Total Due</td>
-          <td style="padding: 12px 16px; font-weight: 800; color: #137333; font-size: 16px;">${grandTotalStr}</td>
+          <td class="email-meta-col-label" style="padding: 12px 16px; font-weight: 800; color: #137333; font-size: 13px;">Grand Total Due</td>
+          <td class="email-meta-col-val" style="padding: 12px 16px; font-weight: 800; color: #137333; font-size: 16px;">${grandTotalStr}</td>
         </tr>
       </table>
 
@@ -207,13 +283,13 @@ export async function sendPaymentReminderEmail(invoice: Invoice, customer?: Cust
 
   const htmlContent = `
 <!DOCTYPE html>
-<html>
-<head><meta charset="utf-8"></head>
-<body style="font-family: -apple-system, sans-serif; background: #f4f3ef; margin: 0; padding: 24px 16px; color: #111;">
-  <div style="max-width: 600px; margin: 0 auto; background: #fff; border-radius: 8px; border: 1px solid #e0dfd5; padding: 32px; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
+<html lang="en">
+${renderBusinessEmailHead('Payment Reminder — Zawr Industries')}
+<body class="email-outer-body" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background: #f4f3ef; margin: 0; padding: 24px 16px; color: #111; -webkit-font-smoothing: antialiased;">
+  <div class="email-container" style="max-width: 600px; width: 100%; margin: 0 auto; background: #fff; border-radius: 8px; border: 1px solid #e0dfd5; padding: 32px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); box-sizing: border-box;">
     <div style="border-bottom: 2px solid #C5221F; padding-bottom: 16px; margin-bottom: 24px;">
       <span style="font-size: 10px; font-weight: 700; color: #C5221F; letter-spacing: 1.5px; text-transform: uppercase;">ACCOUNTS RECEIVABLE NOTIFICATION</span>
-      <h2 style="margin: 4px 0 0; font-size: 20px; font-weight: 800;">PAYMENT REMINDER</h2>
+      <h2 class="email-title-lg" style="margin: 4px 0 0; font-size: 20px; font-weight: 800;">PAYMENT REMINDER</h2>
     </div>
 
     <p style="font-size: 14px; color: #333; margin: 0 0 16px;">Dear <strong>${invoice.customerName}</strong>,</p>
@@ -222,13 +298,13 @@ export async function sendPaymentReminderEmail(invoice: Invoice, customer?: Cust
     </p>
 
     <table width="100%" cellpadding="0" cellspacing="0" style="background: #fafaf9; border: 1px solid #ebebeb; border-radius: 6px; font-size: 13px; margin-bottom: 24px;">
-      <tr><td style="padding: 10px 16px; border-bottom: 1px solid #eee; font-weight: 700; color: #666;">Invoice Reference</td><td style="padding: 10px 16px; border-bottom: 1px solid #eee; font-weight: 700;">${invoice.invoiceNumber}</td></tr>
-      <tr><td style="padding: 10px 16px; border-bottom: 1px solid #eee; font-weight: 700; color: #666;">Invoice Date</td><td style="padding: 10px 16px; border-bottom: 1px solid #eee;">${formatShortDate(invoice.invoiceDate)}</td></tr>
-      <tr><td style="padding: 10px 16px; border-bottom: 1px solid #eee; font-weight: 700; color: #666;">Due Date</td><td style="padding: 10px 16px; border-bottom: 1px solid #eee; font-weight: 700; color: #C5221F;">${formatShortDate(invoice.dueDate)}</td></tr>
-      <tr style="background: #FCE8E6;"><td style="padding: 12px 16px; font-weight: 800; color: #C5221F;">Outstanding Balance</td><td style="padding: 12px 16px; font-weight: 800; color: #C5221F; font-size: 15px;">${balanceStr}</td></tr>
+      <tr><td class="email-meta-col-label" style="padding: 10px 16px; border-bottom: 1px solid #eee; font-weight: 700; color: #666; width: 38%;">Invoice Reference</td><td class="email-meta-col-val" style="padding: 10px 16px; border-bottom: 1px solid #eee; font-weight: 700; font-family: monospace;">${invoice.invoiceNumber}</td></tr>
+      <tr><td class="email-meta-col-label" style="padding: 10px 16px; border-bottom: 1px solid #eee; font-weight: 700; color: #666;">Invoice Date</td><td class="email-meta-col-val" style="padding: 10px 16px; border-bottom: 1px solid #eee;">${formatShortDate(invoice.invoiceDate)}</td></tr>
+      <tr><td class="email-meta-col-label" style="padding: 10px 16px; border-bottom: 1px solid #eee; font-weight: 700; color: #666;">Due Date</td><td class="email-meta-col-val" style="padding: 10px 16px; border-bottom: 1px solid #eee; font-weight: 700; color: #C5221F;">${formatShortDate(invoice.dueDate)}</td></tr>
+      <tr style="background: #FCE8E6;"><td class="email-meta-col-label" style="padding: 12px 16px; font-weight: 800; color: #C5221F;">Outstanding Balance</td><td class="email-meta-col-val" style="padding: 12px 16px; font-weight: 800; color: #C5221F; font-size: 15px;">${balanceStr}</td></tr>
     </table>
 
-    <div style="background: #fafaf8; border-left: 3px solid #111; padding: 14px; font-size: 12px; margin-bottom: 24px;">
+    <div style="background: #fafaf8; border-left: 3px solid #111; padding: 14px; font-size: 12px; margin-bottom: 24px; border-radius: 4px;">
       <strong>Payment Details (HDFC Bank):</strong><br>
       A/C: 50200088921841 | IFSC: HDFC0001234 | Zawr Industries LLP
     </div>
@@ -267,16 +343,22 @@ export async function sendPaymentReceiptEmail(params: PaymentReceiptParams) {
 
   const htmlContent = `
 <!DOCTYPE html>
-<html>
-<head><meta charset="utf-8"></head>
-<body style="font-family: -apple-system, sans-serif; background: #f4f3ef; margin: 0; padding: 24px 16px; color: #111;">
-  <div style="max-width: 600px; margin: 0 auto; background: #fff; border-radius: 8px; border: 1px solid #e0dfd5; padding: 32px; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
-    <div style="background: #111; color: #fff; padding: 18px 24px; border-radius: 6px; margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center;">
-      <div>
-        <span style="font-size: 10px; font-weight: 700; color: #10B981; letter-spacing: 1px;">OFFICIAL RECEIPT VOUCHER</span>
-        <h2 style="margin: 4px 0 0; font-size: 18px; font-weight: 800;">ZAWR INDUSTRIES</h2>
-      </div>
-      <span style="background: #E6F4EA; color: #137333; font-weight: 800; font-size: 11px; padding: 4px 10px; border-radius: 20px;">PAYMENT SETTLED</span>
+<html lang="en">
+${renderBusinessEmailHead('Payment Receipt — Zawr Industries')}
+<body class="email-outer-body" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background: #f4f3ef; margin: 0; padding: 24px 16px; color: #111; -webkit-font-smoothing: antialiased;">
+  <div class="email-container" style="max-width: 600px; width: 100%; margin: 0 auto; background: #fff; border-radius: 8px; border: 1px solid #e0dfd5; padding: 32px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); box-sizing: border-box;">
+    <div class="email-header-banner" style="background: #111; color: #fff; padding: 18px 24px; border-radius: 6px; margin-bottom: 24px;">
+      <table role="presentation" width="100%" border="0" cellpadding="0" cellspacing="0" style="width: 100%; border-collapse: collapse;">
+        <tr>
+          <td valign="middle" align="left">
+            <span style="font-size: 10px; font-weight: 700; color: #10B981; letter-spacing: 1px;">OFFICIAL RECEIPT VOUCHER</span>
+            <h2 class="email-title-lg" style="margin: 4px 0 0; font-size: 18px; font-weight: 800; color: #fff;">ZAWR INDUSTRIES</h2>
+          </td>
+          <td valign="middle" align="right">
+            <span style="background: #E6F4EA; color: #137333; font-weight: 800; font-size: 11px; padding: 4px 10px; border-radius: 20px; display: inline-block; white-space: nowrap;">PAYMENT SETTLED</span>
+          </td>
+        </tr>
+      </table>
     </div>
 
     <p style="font-size: 14px; color: #333; margin: 0 0 16px;">Dear <strong>${invoice.customerName}</strong>,</p>
@@ -285,12 +367,12 @@ export async function sendPaymentReceiptEmail(params: PaymentReceiptParams) {
     </p>
 
     <table width="100%" cellpadding="0" cellspacing="0" style="background: #fafaf9; border: 1px solid #ebebeb; border-radius: 6px; font-size: 13px; margin-bottom: 24px;">
-      <tr><td style="padding: 10px 16px; border-bottom: 1px solid #eee; font-weight: 700; color: #666; width: 35%;">Receipt Date</td><td style="padding: 10px 16px; border-bottom: 1px solid #eee;">${formatShortDate()}</td></tr>
-      <tr><td style="padding: 10px 16px; border-bottom: 1px solid #eee; font-weight: 700; color: #666;">Invoice Cleared</td><td style="padding: 10px 16px; border-bottom: 1px solid #eee; font-weight: 700;">${invoice.invoiceNumber}</td></tr>
-      <tr><td style="padding: 10px 16px; border-bottom: 1px solid #eee; font-weight: 700; color: #666;">Amount Received</td><td style="padding: 10px 16px; border-bottom: 1px solid #eee; font-weight: 800; color: #137333; font-size: 14px;">${amountStr}</td></tr>
-      ${utrReference ? `<tr><td style="padding: 10px 16px; border-bottom: 1px solid #eee; font-weight: 700; color: #666;">Bank UTR / Ref</td><td style="padding: 10px 16px; border-bottom: 1px solid #eee; font-family: monospace;">${utrReference}</td></tr>` : ''}
-      ${bankName ? `<tr><td style="padding: 10px 16px; border-bottom: 1px solid #eee; font-weight: 700; color: #666;">Deposit Account</td><td style="padding: 10px 16px; border-bottom: 1px solid #eee;">${bankName}</td></tr>` : ''}
-      <tr style="background: #fafaf8;"><td style="padding: 12px 16px; font-weight: 800; color: #666;">Remaining Balance</td><td style="padding: 12px 16px; font-weight: 800; color: ${remainingPaise > 0 ? '#C5221F' : '#137333'}; font-size: 14px;">${formatINR(remainingPaise)}</td></tr>
+      <tr><td class="email-meta-col-label" style="padding: 10px 16px; border-bottom: 1px solid #eee; font-weight: 700; color: #666; width: 38%;">Receipt Date</td><td class="email-meta-col-val" style="padding: 10px 16px; border-bottom: 1px solid #eee;">${formatShortDate()}</td></tr>
+      <tr><td class="email-meta-col-label" style="padding: 10px 16px; border-bottom: 1px solid #eee; font-weight: 700; color: #666;">Invoice Cleared</td><td class="email-meta-col-val" style="padding: 10px 16px; border-bottom: 1px solid #eee; font-weight: 700; font-family: monospace;">${invoice.invoiceNumber}</td></tr>
+      <tr><td class="email-meta-col-label" style="padding: 10px 16px; border-bottom: 1px solid #eee; font-weight: 700; color: #666;">Amount Received</td><td class="email-meta-col-val" style="padding: 10px 16px; border-bottom: 1px solid #eee; font-weight: 800; color: #137333; font-size: 14px;">${amountStr}</td></tr>
+      ${utrReference ? `<tr><td class="email-meta-col-label" style="padding: 10px 16px; border-bottom: 1px solid #eee; font-weight: 700; color: #666;">Bank UTR / Ref</td><td class="email-meta-col-val" style="padding: 10px 16px; border-bottom: 1px solid #eee; font-family: monospace;">${utrReference}</td></tr>` : ''}
+      ${bankName ? `<tr><td class="email-meta-col-label" style="padding: 10px 16px; border-bottom: 1px solid #eee; font-weight: 700; color: #666;">Deposit Account</td><td class="email-meta-col-val" style="padding: 10px 16px; border-bottom: 1px solid #eee;">${bankName}</td></tr>` : ''}
+      <tr style="background: #fafaf8;"><td class="email-meta-col-label" style="padding: 12px 16px; font-weight: 800; color: #666;">Remaining Balance</td><td class="email-meta-col-val" style="padding: 12px 16px; font-weight: 800; color: ${remainingPaise > 0 ? '#C5221F' : '#137333'}; font-size: 14px;">${formatINR(remainingPaise)}</td></tr>
     </table>
 
     <div style="background: #e6f4ea; border: 1px solid #137333; padding: 12px 16px; border-radius: 4px; font-size: 12px; color: #137333; text-align: center;">
@@ -352,19 +434,19 @@ export async function sendCustomerStatementEmail(customer: Customer, customerInv
 
   const htmlContent = `
 <!DOCTYPE html>
-<html>
-<head><meta charset="utf-8"></head>
-<body style="font-family: -apple-system, sans-serif; background: #f4f3ef; margin: 0; padding: 24px 16px; color: #111;">
-  <div style="max-width: 640px; margin: 0 auto; background: #fff; border-radius: 8px; border: 1px solid #e0dfd5; padding: 32px; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
-    <h2 style="margin: 0; font-size: 20px; font-weight: 800;">ZAWR INDUSTRIES — STATEMENT OF ACCOUNT</h2>
+<html lang="en">
+${renderBusinessEmailHead('Customer Statement of Account — Zawr Industries')}
+<body class="email-outer-body" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background: #f4f3ef; margin: 0; padding: 24px 16px; color: #111; -webkit-font-smoothing: antialiased;">
+  <div class="email-container" style="max-width: 640px; width: 100%; margin: 0 auto; background: #fff; border-radius: 8px; border: 1px solid #e0dfd5; padding: 32px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); box-sizing: border-box;">
+    <h2 class="email-title-lg" style="margin: 0; font-size: 20px; font-weight: 800;">ZAWR INDUSTRIES — STATEMENT OF ACCOUNT</h2>
     <p style="font-size: 12px; color: #666; margin: 4px 0 20px;">Customer Subledger Statement · ${customer.name}</p>
 
     <table width="100%" cellpadding="0" cellspacing="0" style="background: #fafaf9; border: 1px solid #ebebeb; border-radius: 6px; font-size: 13px; margin-bottom: 24px;">
-      <tr><td style="padding: 10px 16px; border-bottom: 1px solid #eee; font-weight: 700; color: #666; width: 40%;">Total Invoiced Value</td><td style="padding: 10px 16px; border-bottom: 1px solid #eee; font-weight: 700;">${formatINR(totalInvoicedPaise)}</td></tr>
-      <tr><td style="padding: 10px 16px; border-bottom: 1px solid #eee; font-weight: 700; color: #666;">Total Receipts Credited</td><td style="padding: 10px 16px; border-bottom: 1px solid #eee; font-weight: 700; color: #137333;">${formatINR(totalPaidPaise)}</td></tr>
+      <tr><td class="email-meta-col-label" style="padding: 10px 16px; border-bottom: 1px solid #eee; font-weight: 700; color: #666; width: 40%;">Total Invoiced Value</td><td class="email-meta-col-val" style="padding: 10px 16px; border-bottom: 1px solid #eee; font-weight: 700;">${formatINR(totalInvoicedPaise)}</td></tr>
+      <tr><td class="email-meta-col-label" style="padding: 10px 16px; border-bottom: 1px solid #eee; font-weight: 700; color: #666;">Total Receipts Credited</td><td class="email-meta-col-val" style="padding: 10px 16px; border-bottom: 1px solid #eee; font-weight: 700; color: #137333;">${formatINR(totalPaidPaise)}</td></tr>
       <tr style="background: ${closingBalancePaise > 0 ? '#FCE8E6' : '#E6F4EA'};">
-        <td style="padding: 12px 16px; font-weight: 800; color: ${closingBalancePaise > 0 ? '#C5221F' : '#137333'};">Closing Net Balance</td>
-        <td style="padding: 12px 16px; font-weight: 800; color: ${closingBalancePaise > 0 ? '#C5221F' : '#137333'}; font-size: 16px;">${formatINR(closingBalancePaise)}</td>
+        <td class="email-meta-col-label" style="padding: 12px 16px; font-weight: 800; color: ${closingBalancePaise > 0 ? '#C5221F' : '#137333'};">Closing Net Balance</td>
+        <td class="email-meta-col-val" style="padding: 12px 16px; font-weight: 800; color: ${closingBalancePaise > 0 ? '#C5221F' : '#137333'}; font-size: 16px;">${formatINR(closingBalancePaise)}</td>
       </tr>
     </table>
 
@@ -409,13 +491,13 @@ export async function sendVendorRemittanceEmail(params: VendorRemittanceParams) 
 
   const htmlContent = `
 <!DOCTYPE html>
-<html>
-<head><meta charset="utf-8"></head>
-<body style="font-family: -apple-system, sans-serif; background: #f4f3ef; margin: 0; padding: 24px 16px; color: #111;">
-  <div style="max-width: 600px; margin: 0 auto; background: #fff; border-radius: 8px; border: 1px solid #e0dfd5; padding: 32px; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
-    <div style="background: #111; color: #fff; padding: 18px 24px; border-radius: 6px; margin-bottom: 24px;">
+<html lang="en">
+${renderBusinessEmailHead('Payment Advice — Zawr Industries')}
+<body class="email-outer-body" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background: #f4f3ef; margin: 0; padding: 24px 16px; color: #111; -webkit-font-smoothing: antialiased;">
+  <div class="email-container" style="max-width: 600px; width: 100%; margin: 0 auto; background: #fff; border-radius: 8px; border: 1px solid #e0dfd5; padding: 32px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); box-sizing: border-box;">
+    <div class="email-header-banner" style="background: #111; color: #fff; padding: 18px 24px; border-radius: 6px; margin-bottom: 24px;">
       <span style="font-size: 10px; font-weight: 700; color: #10B981; letter-spacing: 1px;">SUPPLIER PAYMENT DISBURSEMENT</span>
-      <h2 style="margin: 4px 0 0; font-size: 18px; font-weight: 800;">ZAWR INDUSTRIES — PAYMENT ADVICE</h2>
+      <h2 class="email-title-lg" style="margin: 4px 0 0; font-size: 18px; font-weight: 800; color: #fff;">ZAWR INDUSTRIES — PAYMENT ADVICE</h2>
     </div>
 
     <p style="font-size: 14px; color: #333; margin: 0 0 16px;">Dear <strong>${bill.vendorName}</strong>,</p>
@@ -424,12 +506,12 @@ export async function sendVendorRemittanceEmail(params: VendorRemittanceParams) 
     </p>
 
     <table width="100%" cellpadding="0" cellspacing="0" style="background: #fafaf9; border: 1px solid #ebebeb; border-radius: 6px; font-size: 13px; margin-bottom: 24px;">
-      <tr><td style="padding: 10px 16px; border-bottom: 1px solid #eee; font-weight: 700; color: #666; width: 38%;">Supplier Bill Reference</td><td style="padding: 10px 16px; border-bottom: 1px solid #eee; font-weight: 700;">${bill.billNumber}</td></tr>
-      <tr><td style="padding: 10px 16px; border-bottom: 1px solid #eee; font-weight: 700; color: #666;">Payment Date</td><td style="padding: 10px 16px; border-bottom: 1px solid #eee;">${formatShortDate(paymentDate)}</td></tr>
-      <tr><td style="padding: 10px 16px; border-bottom: 1px solid #eee; font-weight: 700; color: #666;">Gross Invoice Amount</td><td style="padding: 10px 16px; border-bottom: 1px solid #eee;">${formatINR(bill.totalPaise)}</td></tr>
-      <tr><td style="padding: 10px 16px; border-bottom: 1px solid #eee; font-weight: 700; color: #666;">TDS Withheld (Sec 194C/J)</td><td style="padding: 10px 16px; border-bottom: 1px solid #eee; color: #C5221F;">- ${formatINR(tdsDeductedPaise)}</td></tr>
-      <tr style="background: #e6f4ea;"><td style="padding: 12px 16px; font-weight: 800; color: #137333;">Net Remitted to Bank</td><td style="padding: 12px 16px; font-weight: 800; color: #137333; font-size: 15px;">${netPaidStr}</td></tr>
-      <tr><td style="padding: 10px 16px; font-weight: 700; color: #666;">Bank UTR / Ref Number</td><td style="padding: 10px 16px; font-family: monospace; font-weight: 700;">${utrReference}</td></tr>
+      <tr><td class="email-meta-col-label" style="padding: 10px 16px; border-bottom: 1px solid #eee; font-weight: 700; color: #666; width: 38%;">Supplier Bill Reference</td><td class="email-meta-col-val" style="padding: 10px 16px; border-bottom: 1px solid #eee; font-weight: 700; font-family: monospace;">${bill.billNumber}</td></tr>
+      <tr><td class="email-meta-col-label" style="padding: 10px 16px; border-bottom: 1px solid #eee; font-weight: 700; color: #666;">Payment Date</td><td class="email-meta-col-val" style="padding: 10px 16px; border-bottom: 1px solid #eee;">${formatShortDate(paymentDate)}</td></tr>
+      <tr><td class="email-meta-col-label" style="padding: 10px 16px; border-bottom: 1px solid #eee; font-weight: 700; color: #666;">Gross Invoice Amount</td><td class="email-meta-col-val" style="padding: 10px 16px; border-bottom: 1px solid #eee;">${formatINR(bill.totalPaise)}</td></tr>
+      <tr><td class="email-meta-col-label" style="padding: 10px 16px; border-bottom: 1px solid #eee; font-weight: 700; color: #666;">TDS Withheld (Sec 194C/J)</td><td class="email-meta-col-val" style="padding: 10px 16px; border-bottom: 1px solid #eee; color: #C5221F;">- ${formatINR(tdsDeductedPaise)}</td></tr>
+      <tr style="background: #e6f4ea;"><td class="email-meta-col-label" style="padding: 12px 16px; font-weight: 800; color: #137333;">Net Remitted to Bank</td><td class="email-meta-col-val" style="padding: 12px 16px; font-weight: 800; color: #137333; font-size: 15px;">${netPaidStr}</td></tr>
+      <tr><td class="email-meta-col-label" style="padding: 10px 16px; font-weight: 700; color: #666;">Bank UTR / Ref Number</td><td class="email-meta-col-val" style="padding: 10px 16px; font-family: monospace; font-weight: 700;">${utrReference}</td></tr>
     </table>
 
     <div style="font-size: 11px; color: #777; text-align: center;">
@@ -455,27 +537,27 @@ export async function sendApprovalRequestEmail(expense: ExpenseSubmission) {
 
   const htmlContent = `
 <!DOCTYPE html>
-<html>
-<head><meta charset="utf-8"></head>
-<body style="font-family: -apple-system, sans-serif; background: #f4f3ef; margin: 0; padding: 24px 16px; color: #111;">
-  <div style="max-width: 600px; margin: 0 auto; background: #fff; border-radius: 8px; border: 1px solid #e0dfd5; padding: 32px;">
+<html lang="en">
+${renderBusinessEmailHead('Expense Approval Pending — Zawr Books')}
+<body class="email-outer-body" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background: #f4f3ef; margin: 0; padding: 24px 16px; color: #111; -webkit-font-smoothing: antialiased;">
+  <div class="email-container" style="max-width: 600px; width: 100%; margin: 0 auto; background: #fff; border-radius: 8px; border: 1px solid #e0dfd5; padding: 32px; box-sizing: border-box; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
     <div style="border-bottom: 2px solid #E37400; padding-bottom: 14px; margin-bottom: 20px;">
       <span style="font-size: 10px; font-weight: 700; color: #E37400; letter-spacing: 1.5px; text-transform: uppercase;">MANAGERIAL WORKFLOW & CONTROL</span>
-      <h2 style="margin: 4px 0 0; font-size: 20px; font-weight: 800;">EXPENSE APPROVAL PENDING</h2>
+      <h2 class="email-title-lg" style="margin: 4px 0 0; font-size: 20px; font-weight: 800;">EXPENSE APPROVAL PENDING</h2>
     </div>
 
     <p style="font-size: 14px; color: #333; margin: 0 0 16px;">An employee expense claim requires your executive authorization:</p>
 
     <table width="100%" cellpadding="0" cellspacing="0" style="background: #fafaf9; border: 1px solid #ebebeb; border-radius: 6px; font-size: 13px; margin-bottom: 24px;">
-      <tr><td style="padding: 10px 16px; border-bottom: 1px solid #eee; font-weight: 700; color: #666; width: 35%;">Employee</td><td style="padding: 10px 16px; border-bottom: 1px solid #eee; font-weight: 700;">${expense.employeeName}</td></tr>
-      <tr><td style="padding: 10px 16px; border-bottom: 1px solid #eee; font-weight: 700; color: #666;">Title / Purpose</td><td style="padding: 10px 16px; border-bottom: 1px solid #eee;">${expense.title}</td></tr>
-      <tr><td style="padding: 10px 16px; border-bottom: 1px solid #eee; font-weight: 700; color: #666;">Merchant / Vendor</td><td style="padding: 10px 16px; border-bottom: 1px solid #eee;">${expense.vendorName}</td></tr>
-      <tr><td style="padding: 10px 16px; border-bottom: 1px solid #eee; font-weight: 700; color: #666;">Claim Amount</td><td style="padding: 10px 16px; border-bottom: 1px solid #eee; font-weight: 800; font-size: 15px; color: #111;">${formatINR(expense.grandTotalPaise)}</td></tr>
-      <tr><td style="padding: 10px 16px; font-weight: 700; color: #666;">Submission Date</td><td style="padding: 10px 16px;">${formatShortDate(expense.createdAt)}</td></tr>
+      <tr><td class="email-meta-col-label" style="padding: 10px 16px; border-bottom: 1px solid #eee; font-weight: 700; color: #666; width: 38%;">Employee</td><td class="email-meta-col-val" style="padding: 10px 16px; border-bottom: 1px solid #eee; font-weight: 700;">${expense.employeeName}</td></tr>
+      <tr><td class="email-meta-col-label" style="padding: 10px 16px; border-bottom: 1px solid #eee; font-weight: 700; color: #666;">Title / Purpose</td><td class="email-meta-col-val" style="padding: 10px 16px; border-bottom: 1px solid #eee;">${expense.title}</td></tr>
+      <tr><td class="email-meta-col-label" style="padding: 10px 16px; border-bottom: 1px solid #eee; font-weight: 700; color: #666;">Merchant / Vendor</td><td class="email-meta-col-val" style="padding: 10px 16px; border-bottom: 1px solid #eee;">${expense.vendorName}</td></tr>
+      <tr><td class="email-meta-col-label" style="padding: 10px 16px; border-bottom: 1px solid #eee; font-weight: 700; color: #666;">Claim Amount</td><td class="email-meta-col-val" style="padding: 10px 16px; border-bottom: 1px solid #eee; font-weight: 800; font-size: 15px; color: #111;">${formatINR(expense.grandTotalPaise)}</td></tr>
+      <tr><td class="email-meta-col-label" style="padding: 10px 16px; font-weight: 700; color: #666;">Submission Date</td><td class="email-meta-col-val" style="padding: 10px 16px;">${formatShortDate(expense.createdAt)}</td></tr>
     </table>
 
     <div style="text-align: center; margin-top: 24px;">
-      <a href="https://books.zawrindustries.com/web/approvals" style="background: #111; color: #fff; text-decoration: none; padding: 12px 28px; border-radius: 4px; font-weight: 700; font-size: 13px; display: inline-block;">
+      <a href="https://books.zawrindustries.com/web/approvals" class="email-action-btn" style="background: #111; color: #fff; text-decoration: none; padding: 12px 28px; border-radius: 4px; font-weight: 700; font-size: 13px; display: inline-block;">
         Review & Authorize in Approvals Queue
       </a>
     </div>
@@ -503,18 +585,24 @@ export async function sendApprovalDecisionEmail(expense: ExpenseSubmission, deci
 
   const htmlContent = `
 <!DOCTYPE html>
-<html>
-<head><meta charset="utf-8"></head>
-<body style="font-family: -apple-system, sans-serif; background: #f4f3ef; margin: 0; padding: 24px 16px; color: #111;">
-  <div style="max-width: 600px; margin: 0 auto; background: #fff; border-radius: 8px; border: 1px solid #e0dfd5; padding: 32px;">
-    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid ${badgeColor}; padding-bottom: 14px; margin-bottom: 20px;">
-      <div>
-        <span style="font-size: 10px; font-weight: 700; color: #666; letter-spacing: 1.5px; text-transform: uppercase;">APPROVAL STATUS UPDATE</span>
-        <h2 style="margin: 4px 0 0; font-size: 18px; font-weight: 800;">EXPENSE CLAIM ${decision.toUpperCase()}</h2>
-      </div>
-      <span style="background: ${badgeBg}; color: ${badgeColor}; font-weight: 800; font-size: 12px; padding: 4px 12px; border-radius: 20px;">
-        ${decision}
-      </span>
+<html lang="en">
+${renderBusinessEmailHead(`Expense Claim ${decision} — Zawr Books`)}
+<body class="email-outer-body" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background: #f4f3ef; margin: 0; padding: 24px 16px; color: #111; -webkit-font-smoothing: antialiased;">
+  <div class="email-container" style="max-width: 600px; width: 100%; margin: 0 auto; background: #fff; border-radius: 8px; border: 1px solid #e0dfd5; padding: 32px; box-sizing: border-box; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
+    <div style="border-bottom: 2px solid ${badgeColor}; padding-bottom: 14px; margin-bottom: 20px;">
+      <table role="presentation" width="100%" border="0" cellpadding="0" cellspacing="0" style="width: 100%; border-collapse: collapse;">
+        <tr>
+          <td valign="middle" align="left">
+            <span style="font-size: 10px; font-weight: 700; color: #666; letter-spacing: 1.5px; text-transform: uppercase;">APPROVAL STATUS UPDATE</span>
+            <h2 class="email-title-lg" style="margin: 4px 0 0; font-size: 18px; font-weight: 800;">EXPENSE CLAIM ${decision.toUpperCase()}</h2>
+          </td>
+          <td valign="middle" align="right">
+            <span style="background: ${badgeBg}; color: ${badgeColor}; font-weight: 800; font-size: 12px; padding: 4px 12px; border-radius: 20px; display: inline-block; white-space: nowrap;">
+              ${decision}
+            </span>
+          </td>
+        </tr>
+      </table>
     </div>
 
     <p style="font-size: 14px; color: #333; margin: 0 0 16px;">Dear <strong>${expense.employeeName}</strong>,</p>
@@ -523,9 +611,9 @@ export async function sendApprovalDecisionEmail(expense: ExpenseSubmission, deci
     </p>
 
     <table width="100%" cellpadding="0" cellspacing="0" style="background: #fafaf9; border: 1px solid #ebebeb; border-radius: 6px; font-size: 13px; margin-bottom: 20px;">
-      <tr><td style="padding: 10px 16px; border-bottom: 1px solid #eee; font-weight: 700; color: #666; width: 35%;">Claimed Amount</td><td style="padding: 10px 16px; border-bottom: 1px solid #eee; font-weight: 800;">${formatINR(expense.grandTotalPaise)}</td></tr>
-      <tr><td style="padding: 10px 16px; border-bottom: 1px solid #eee; font-weight: 700; color: #666;">Decision Date</td><td style="padding: 10px 16px; border-bottom: 1px solid #eee;">${formatShortDate()}</td></tr>
-      ${comment ? `<tr><td style="padding: 10px 16px; font-weight: 700; color: #666;">Reviewer Comment</td><td style="padding: 10px 16px; font-style: italic;">"${comment}"</td></tr>` : ''}
+      <tr><td class="email-meta-col-label" style="padding: 10px 16px; border-bottom: 1px solid #eee; font-weight: 700; color: #666; width: 38%;">Claimed Amount</td><td class="email-meta-col-val" style="padding: 10px 16px; border-bottom: 1px solid #eee; font-weight: 800;">${formatINR(expense.grandTotalPaise)}</td></tr>
+      <tr><td class="email-meta-col-label" style="padding: 10px 16px; border-bottom: 1px solid #eee; font-weight: 700; color: #666;">Decision Date</td><td class="email-meta-col-val" style="padding: 10px 16px; border-bottom: 1px solid #eee;">${formatShortDate()}</td></tr>
+      ${comment ? `<tr><td class="email-meta-col-label" style="padding: 10px 16px; font-weight: 700; color: #666;">Reviewer Comment</td><td class="email-meta-col-val" style="padding: 10px 16px; font-style: italic;">"${comment}"</td></tr>` : ''}
     </table>
   </div>
 </body>
@@ -552,27 +640,27 @@ export async function sendBudgetAlertEmail(budget: BudgetItem, percent: number) 
 
   const htmlContent = `
 <!DOCTYPE html>
-<html>
-<head><meta charset="utf-8"></head>
-<body style="font-family: -apple-system, sans-serif; background: #f4f3ef; margin: 0; padding: 24px 16px; color: #111;">
-  <div style="max-width: 600px; margin: 0 auto; background: #fff; border-radius: 8px; border: 1px solid #e0dfd5; padding: 32px;">
+<html lang="en">
+${renderBusinessEmailHead(`${alertTitle} — Zawr Books`)}
+<body class="email-outer-body" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background: #f4f3ef; margin: 0; padding: 24px 16px; color: #111; -webkit-font-smoothing: antialiased;">
+  <div class="email-container" style="max-width: 600px; width: 100%; margin: 0 auto; background: #fff; border-radius: 8px; border: 1px solid #e0dfd5; padding: 32px; box-sizing: border-box; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
     <div style="border-bottom: 2px solid ${badgeColor}; padding-bottom: 14px; margin-bottom: 20px;">
       <span style="font-size: 10px; font-weight: 700; color: ${badgeColor}; letter-spacing: 1.5px; text-transform: uppercase;">${alertTitle}</span>
-      <h2 style="margin: 4px 0 0; font-size: 20px; font-weight: 800;">BUDGET VARIANCE ALERT</h2>
+      <h2 class="email-title-lg" style="margin: 4px 0 0; font-size: 20px; font-weight: 800;">BUDGET VARIANCE ALERT</h2>
     </div>
 
     <p style="font-size: 14px; color: #333; margin: 0 0 16px;">Spending in cost centre <strong>${budget.name} (${budget.costCentre})</strong> has crossed approved operating limits:</p>
 
     <table width="100%" cellpadding="0" cellspacing="0" style="background: #fafaf9; border: 1px solid #ebebeb; border-radius: 6px; font-size: 13px; margin-bottom: 24px;">
-      <tr><td style="padding: 10px 16px; border-bottom: 1px solid #eee; font-weight: 700; color: #666; width: 40%;">Category / Cost Centre</td><td style="padding: 10px 16px; border-bottom: 1px solid #eee; font-weight: 700;">${budget.name} (${budget.costCentre})</td></tr>
-      <tr><td style="padding: 10px 16px; border-bottom: 1px solid #eee; font-weight: 700; color: #666;">Allocated Budget</td><td style="padding: 10px 16px; border-bottom: 1px solid #eee;">${formatINR(budget.budgetPaise)}</td></tr>
-      <tr><td style="padding: 10px 16px; border-bottom: 1px solid #eee; font-weight: 700; color: #666;">Actual Spent</td><td style="padding: 10px 16px; border-bottom: 1px solid #eee; font-weight: 800; color: #C5221F;">${formatINR(budget.actualPaise)}</td></tr>
-      <tr><td style="padding: 10px 16px; border-bottom: 1px solid #eee; font-weight: 700; color: #666;">Remaining Limit</td><td style="padding: 10px 16px; border-bottom: 1px solid #eee;">${formatINR(budget.budgetPaise - budget.actualPaise)}</td></tr>
-      <tr style="background: ${badgeBg};"><td style="padding: 12px 16px; font-weight: 800; color: ${badgeColor};">Utilization Rate</td><td style="padding: 12px 16px; font-weight: 800; color: ${badgeColor}; font-size: 16px;">${percent}%</td></tr>
+      <tr><td class="email-meta-col-label" style="padding: 10px 16px; border-bottom: 1px solid #eee; font-weight: 700; color: #666; width: 40%;">Category / Cost Centre</td><td class="email-meta-col-val" style="padding: 10px 16px; border-bottom: 1px solid #eee; font-weight: 700;">${budget.name} (${budget.costCentre})</td></tr>
+      <tr><td class="email-meta-col-label" style="padding: 10px 16px; border-bottom: 1px solid #eee; font-weight: 700; color: #666;">Allocated Budget</td><td class="email-meta-col-val" style="padding: 10px 16px; border-bottom: 1px solid #eee;">${formatINR(budget.budgetPaise)}</td></tr>
+      <tr><td class="email-meta-col-label" style="padding: 10px 16px; border-bottom: 1px solid #eee; font-weight: 700; color: #666;">Actual Spent</td><td class="email-meta-col-val" style="padding: 10px 16px; border-bottom: 1px solid #eee; font-weight: 800; color: #C5221F;">${formatINR(budget.actualPaise)}</td></tr>
+      <tr><td class="email-meta-col-label" style="padding: 10px 16px; border-bottom: 1px solid #eee; font-weight: 700; color: #666;">Remaining Limit</td><td class="email-meta-col-val" style="padding: 10px 16px; border-bottom: 1px solid #eee;">${formatINR(budget.budgetPaise - budget.actualPaise)}</td></tr>
+      <tr style="background: ${badgeBg};"><td class="email-meta-col-label" style="padding: 12px 16px; font-weight: 800; color: ${badgeColor};">Utilization Rate</td><td class="email-meta-col-val" style="padding: 12px 16px; font-weight: 800; color: ${badgeColor}; font-size: 16px;">${percent}%</td></tr>
     </table>
 
     <div style="text-align: center;">
-      <a href="https://books.zawrindustries.com/web/budgets" style="background: #111; color: #fff; text-decoration: none; padding: 12px 28px; border-radius: 4px; font-weight: 700; font-size: 13px; display: inline-block;">
+      <a href="https://books.zawrindustries.com/web/budgets" class="email-action-btn" style="background: #111; color: #fff; text-decoration: none; padding: 12px 28px; border-radius: 4px; font-weight: 700; font-size: 13px; display: inline-block;">
         View Cost Centre Allocations
       </a>
     </div>

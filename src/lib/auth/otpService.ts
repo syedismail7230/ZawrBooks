@@ -88,10 +88,29 @@ export class OtpService {
 <html lang="en">
 <head>
   <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <meta name="x-apple-disable-message-reformatting">
   <title>Your Zawr Books Verification Code</title>
+  <style>
+    @media only screen and (max-width: 600px) {
+      .otp-outer-body {
+        padding: 16px 8px !important;
+      }
+      .otp-container {
+        padding: 24px 16px !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+      }
+      .otp-code-box {
+        padding: 14px 10px !important;
+        letter-spacing: 5px !important;
+        font-size: 26px !important;
+      }
+    }
+  </style>
 </head>
-<body style="margin: 0; padding: 40px 15px; background-color: #f7f7f7; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #111111;">
-  <div style="max-width: 520px; margin: 0 auto; background-color: #ffffff; padding: 36px 32px; border: 1px solid #e0e0e0; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
+<body class="otp-outer-body" style="margin: 0; padding: 40px 15px; background-color: #f7f7f7; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #111111;">
+  <div class="otp-container" style="max-width: 520px; width: 100%; margin: 0 auto; background-color: #ffffff; padding: 36px 32px; border: 1px solid #e0e0e0; box-shadow: 0 1px 3px rgba(0,0,0,0.04); box-sizing: border-box;">
     <!-- Header with actual logo -->
     <table role="presentation" width="100%" border="0" cellpadding="0" cellspacing="0" style="width: 100%; border-collapse: collapse;">
       <tr>
@@ -116,7 +135,7 @@ export class OtpService {
 
     <!-- Large Monospace OTP Display -->
     <div style="background-color: #f4f3ef; border: 1px solid #e5e5e5; border-radius: 4px; padding: 18px 20px; text-align: center; margin: 0 0 24px 0;">
-      <span style="font-family: 'Courier New', Courier, monospace, monospace; font-size: 32px; font-weight: 800; letter-spacing: 8px; color: #111111; display: inline-block;">
+      <span class="otp-code-box" style="font-family: 'Courier New', Courier, monospace, monospace; font-size: 32px; font-weight: 800; letter-spacing: 8px; color: #111111; display: inline-block;">
         ${code}
       </span>
     </div>

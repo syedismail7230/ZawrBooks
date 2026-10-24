@@ -167,8 +167,8 @@
       ],
       "outputFormat": "Excel",
       "isActive": true,
-      "nextRunAt": "2026-10-25T14:04:46.543Z",
-      "lastRunAt": "2026-10-24T14:04:46.543Z"
+      "nextRunAt": "2026-10-25T14:31:11.087Z",
+      "lastRunAt": "2026-10-24T14:31:11.087Z"
     },
     {
       "id": "sched-weekly-executive",
@@ -215,6 +215,32 @@
   ],
   "reportExecutionLogs": [
     {
+      "id": "log-1792852271087",
+      "scheduleId": "sched-daily-daybook",
+      "reportName": "Daily Day Book & Cash Audit Digest",
+      "executedAt": "2026-10-24T14:31:11.087Z",
+      "status": "Success",
+      "recipients": [
+        "accounts@zawrindustries.com",
+        "admin@zawrindustries.com",
+        "syedismailart@gmail.com"
+      ],
+      "fileSizeKb": 61
+    },
+    {
+      "id": "log-1792851204337",
+      "scheduleId": "sched-daily-daybook",
+      "reportName": "Daily Day Book & Cash Audit Digest",
+      "executedAt": "2026-10-24T14:13:24.337Z",
+      "status": "Success",
+      "recipients": [
+        "accounts@zawrindustries.com",
+        "admin@zawrindustries.com",
+        "syedismailart@gmail.com"
+      ],
+      "fileSizeKb": 87
+    },
+    {
       "id": "log-1792850686543",
       "scheduleId": "sched-daily-daybook",
       "reportName": "Daily Day Book & Cash Audit Digest",
@@ -228,5 +254,5 @@
       "fileSizeKb": 68
     }
   ],
-  "lastUpdated": "2026-10-24T14:04:46.543Z"
+  "lastUpdated": "2026-10-24T14:31:11.087Z"
 }

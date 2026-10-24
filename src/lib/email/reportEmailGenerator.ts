@@ -119,67 +119,69 @@ export function generateFinancialReportHtml(options: ReportGeneratorOptions): st
       `;
 
       reportDetailHtml = `
-        <table style="width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px;">
-          <thead>
-            <tr style="background-color: #fafafa; border-bottom: 2px solid #111111;">
-              <th style="padding: 10px; text-align: left; font-weight: 700; color: #111111; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px;">Account Code & Name</th>
-              <th style="padding: 10px; text-align: left; font-weight: 700; color: #111111; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px;">Classification</th>
-              <th style="padding: 10px; text-align: right; font-weight: 700; color: #111111; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px;">Amount (INR)</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr style="background: #f5f5f5;">
-              <td colspan="3" style="padding: 8px 10px; font-weight: 700; font-size: 11px; text-transform: uppercase; color: #444;">I. Operating Revenue</td>
-            </tr>
-            ${
-              pnl.revenueAccounts.length === 0
-                ? `<tr><td colspan="3" style="padding: 12px 10px; color: #777; font-style: italic;">No revenue accounts posted in active ledger.</td></tr>`
-                : pnl.revenueAccounts
-                    .map(
-                      (r) => `
-                <tr style="border-bottom: 1px solid #f0f0f0;">
-                  <td style="padding: 8px 10px; color: #111111;">${r.name}</td>
-                  <td style="padding: 8px 10px; color: #666666;">Revenue from Operations</td>
-                  <td style="padding: 8px 10px; text-align: right; font-weight: 600; color: #111111;">${formatINR(r.amountPaise)}</td>
-                </tr>
-              `
-                    )
-                    .join('')
-            }
-            <tr style="border-top: 2px solid #e0e0e0; background-color: #fafafa;">
-              <td colspan="2" style="padding: 8px 10px; font-weight: 700; color: #111111;">Total Operating Revenue (A)</td>
-              <td style="padding: 8px 10px; text-align: right; font-weight: 700; color: #111111;">${formatINR(pnl.totalRevenuePaise)}</td>
-            </tr>
+        <div class="table-scroll-container" style="width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch;">
+          <table class="financial-data-table" style="width: 100%; min-width: 440px; border-collapse: collapse; margin-top: 10px; font-size: 13px;">
+            <thead>
+              <tr style="background-color: #fafafa; border-bottom: 2px solid #111111;">
+                <th style="padding: 10px; text-align: left; font-weight: 700; color: #111111; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px;">Account Code & Name</th>
+                <th style="padding: 10px; text-align: left; font-weight: 700; color: #111111; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px;">Classification</th>
+                <th style="padding: 10px; text-align: right; font-weight: 700; color: #111111; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px;">Amount (INR)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr style="background: #f5f5f5;">
+                <td colspan="3" style="padding: 8px 10px; font-weight: 700; font-size: 11px; text-transform: uppercase; color: #444;">I. Operating Revenue</td>
+              </tr>
+              ${
+                pnl.revenueAccounts.length === 0
+                  ? `<tr><td colspan="3" style="padding: 12px 10px; color: #777; font-style: italic;">No revenue accounts posted in active ledger.</td></tr>`
+                  : pnl.revenueAccounts
+                      .map(
+                        (r) => `
+                  <tr style="border-bottom: 1px solid #f0f0f0;">
+                    <td style="padding: 8px 10px; color: #111111;">${r.name}</td>
+                    <td style="padding: 8px 10px; color: #666666;">Revenue from Operations</td>
+                    <td style="padding: 8px 10px; text-align: right; font-weight: 600; color: #111111;">${formatINR(r.amountPaise)}</td>
+                  </tr>
+                `
+                      )
+                      .join('')
+              }
+              <tr style="border-top: 2px solid #e0e0e0; background-color: #fafafa;">
+                <td colspan="2" style="padding: 8px 10px; font-weight: 700; color: #111111;">Total Operating Revenue (A)</td>
+                <td style="padding: 8px 10px; text-align: right; font-weight: 700; color: #111111;">${formatINR(pnl.totalRevenuePaise)}</td>
+              </tr>
 
-            <tr style="background: #f5f5f5;">
-              <td colspan="3" style="padding: 8px 10px; font-weight: 700; font-size: 11px; text-transform: uppercase; color: #444; margin-top: 10px;">II. Operating Expenses & Direct Costs</td>
-            </tr>
-            ${
-              pnl.expenseAccounts.length === 0
-                ? `<tr><td colspan="3" style="padding: 12px 10px; color: #777; font-style: italic;">No expense transactions posted in current period.</td></tr>`
-                : pnl.expenseAccounts
-                    .map(
-                      (e) => `
-                <tr style="border-bottom: 1px solid #f0f0f0;">
-                  <td style="padding: 8px 10px; color: #111111;">${e.name}</td>
-                  <td style="padding: 8px 10px; color: #666666;">Operating Expenditure</td>
-                  <td style="padding: 8px 10px; text-align: right; font-weight: 600; color: #111111;">${formatINR(e.amountPaise)}</td>
-                </tr>
-              `
-                    )
-                    .join('')
-            }
-            <tr style="border-top: 2px solid #e0e0e0; background-color: #fafafa;">
-              <td colspan="2" style="padding: 8px 10px; font-weight: 700; color: #111111;">Total Expenditure (B)</td>
-              <td style="padding: 8px 10px; text-align: right; font-weight: 700; color: #111111;">${formatINR(pnl.directCostsPaise + pnl.operatingExpensesPaise + pnl.taxExpensePaise)}</td>
-            </tr>
+              <tr style="background: #f5f5f5;">
+                <td colspan="3" style="padding: 8px 10px; font-weight: 700; font-size: 11px; text-transform: uppercase; color: #444; margin-top: 10px;">II. Operating Expenses & Direct Costs</td>
+              </tr>
+              ${
+                pnl.expenseAccounts.length === 0
+                  ? `<tr><td colspan="3" style="padding: 12px 10px; color: #777; font-style: italic;">No expense transactions posted in current period.</td></tr>`
+                  : pnl.expenseAccounts
+                      .map(
+                        (e) => `
+                  <tr style="border-bottom: 1px solid #f0f0f0;">
+                    <td style="padding: 8px 10px; color: #111111;">${e.name}</td>
+                    <td style="padding: 8px 10px; color: #666666;">Operating Expenditure</td>
+                    <td style="padding: 8px 10px; text-align: right; font-weight: 600; color: #111111;">${formatINR(e.amountPaise)}</td>
+                  </tr>
+                `
+                      )
+                      .join('')
+              }
+              <tr style="border-top: 2px solid #e0e0e0; background-color: #fafafa;">
+                <td colspan="2" style="padding: 8px 10px; font-weight: 700; color: #111111;">Total Expenditure (B)</td>
+                <td style="padding: 8px 10px; text-align: right; font-weight: 700; color: #111111;">${formatINR(pnl.directCostsPaise + pnl.operatingExpensesPaise + pnl.taxExpensePaise)}</td>
+              </tr>
 
-            <tr style="border-top: 2px solid #111111; background-color: #f1f8e9;">
-              <td colspan="2" style="padding: 10px; font-weight: 800; font-size: 14px; color: #111111;">Net Profit / Earnings (A - B)</td>
-              <td style="padding: 10px; text-align: right; font-weight: 800; font-size: 14px; color: ${pnl.netProfitPaise >= 0 ? '#137333' : '#c5221f'};">${formatINR(pnl.netProfitPaise)}</td>
-            </tr>
-          </tbody>
-        </table>
+              <tr style="border-top: 2px solid #111111; background-color: #f1f8e9;">
+                <td colspan="2" style="padding: 10px; font-weight: 800; font-size: 14px; color: #111111;">Net Profit / Earnings (A - B)</td>
+                <td style="padding: 10px; text-align: right; font-weight: 800; font-size: 14px; color: ${pnl.netProfitPaise >= 0 ? '#137333' : '#c5221f'};">${formatINR(pnl.netProfitPaise)}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       `;
       break;
     }
@@ -209,86 +211,88 @@ export function generateFinancialReportHtml(options: ReportGeneratorOptions): st
       `;
 
       reportDetailHtml = `
-        <table style="width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px;">
-          <thead>
-            <tr style="background-color: #fafafa; border-bottom: 2px solid #111111;">
-              <th style="padding: 10px; text-align: left; font-weight: 700; color: #111111; text-transform: uppercase; font-size: 11px;">Category & Account</th>
-              <th style="padding: 10px; text-align: left; font-weight: 700; color: #111111; text-transform: uppercase; font-size: 11px;">Sub-Type</th>
-              <th style="padding: 10px; text-align: right; font-weight: 700; color: #111111; text-transform: uppercase; font-size: 11px;">Amount (INR)</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr style="background: #f5f5f5;">
-              <td colspan="3" style="padding: 8px 10px; font-weight: 700; font-size: 11px; text-transform: uppercase; color: #444;">I. Assets</td>
-            </tr>
-            ${
-              balanceSheet.assets.length === 0
-                ? `<tr><td colspan="3" style="padding: 12px 10px; color: #777; font-style: italic;">No asset balances recorded.</td></tr>`
-                : balanceSheet.assets
-                    .map(
-                      (a) => `
-                <tr style="border-bottom: 1px solid #f0f0f0;">
-                  <td style="padding: 8px 10px; color: #111111;">${a.name}</td>
-                  <td style="padding: 8px 10px; color: #666666;">${a.subType || 'Current Asset'}</td>
-                  <td style="padding: 8px 10px; text-align: right; font-weight: 600; color: #111111;">${formatINR(a.amountPaise)}</td>
-                </tr>
-              `
-                    )
-                    .join('')
-            }
-            <tr style="border-top: 2px solid #e0e0e0; background-color: #fafafa;">
-              <td colspan="2" style="padding: 8px 10px; font-weight: 700; color: #111111;">Total Assets (A)</td>
-              <td style="padding: 8px 10px; text-align: right; font-weight: 700; color: #111111;">${formatINR(balanceSheet.totalAssetsPaise)}</td>
-            </tr>
+        <div class="table-scroll-container" style="width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch;">
+          <table class="financial-data-table" style="width: 100%; min-width: 440px; border-collapse: collapse; margin-top: 10px; font-size: 13px;">
+            <thead>
+              <tr style="background-color: #fafafa; border-bottom: 2px solid #111111;">
+                <th style="padding: 10px; text-align: left; font-weight: 700; color: #111111; text-transform: uppercase; font-size: 11px;">Category & Account</th>
+                <th style="padding: 10px; text-align: left; font-weight: 700; color: #111111; text-transform: uppercase; font-size: 11px;">Sub-Type</th>
+                <th style="padding: 10px; text-align: right; font-weight: 700; color: #111111; text-transform: uppercase; font-size: 11px;">Amount (INR)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr style="background: #f5f5f5;">
+                <td colspan="3" style="padding: 8px 10px; font-weight: 700; font-size: 11px; text-transform: uppercase; color: #444;">I. Assets</td>
+              </tr>
+              ${
+                balanceSheet.assets.length === 0
+                  ? `<tr><td colspan="3" style="padding: 12px 10px; color: #777; font-style: italic;">No asset balances recorded.</td></tr>`
+                  : balanceSheet.assets
+                      .map(
+                        (a) => `
+                  <tr style="border-bottom: 1px solid #f0f0f0;">
+                    <td style="padding: 8px 10px; color: #111111;">${a.name}</td>
+                    <td style="padding: 8px 10px; color: #666666;">${a.subType || 'Current Asset'}</td>
+                    <td style="padding: 8px 10px; text-align: right; font-weight: 600; color: #111111;">${formatINR(a.amountPaise)}</td>
+                  </tr>
+                `
+                      )
+                      .join('')
+              }
+              <tr style="border-top: 2px solid #e0e0e0; background-color: #fafafa;">
+                <td colspan="2" style="padding: 8px 10px; font-weight: 700; color: #111111;">Total Assets (A)</td>
+                <td style="padding: 8px 10px; text-align: right; font-weight: 700; color: #111111;">${formatINR(balanceSheet.totalAssetsPaise)}</td>
+              </tr>
 
-            <tr style="background: #f5f5f5;">
-              <td colspan="3" style="padding: 8px 10px; font-weight: 700; font-size: 11px; text-transform: uppercase; color: #444;">II. Liabilities</td>
-            </tr>
-            ${
-              balanceSheet.liabilities.length === 0
-                ? `<tr><td colspan="3" style="padding: 12px 10px; color: #777; font-style: italic;">No liability balances recorded.</td></tr>`
-                : balanceSheet.liabilities
-                    .map(
-                      (l) => `
-                <tr style="border-bottom: 1px solid #f0f0f0;">
-                  <td style="padding: 8px 10px; color: #111111;">${l.name}</td>
-                  <td style="padding: 8px 10px; color: #666666;">${l.subType || 'Current Liability'}</td>
-                  <td style="padding: 8px 10px; text-align: right; font-weight: 600; color: #111111;">${formatINR(l.amountPaise)}</td>
-                </tr>
-              `
-                    )
-                    .join('')
-            }
-            <tr style="border-top: 2px solid #e0e0e0; background-color: #fafafa;">
-              <td colspan="2" style="padding: 8px 10px; font-weight: 700; color: #111111;">Total Liabilities (B)</td>
-              <td style="padding: 8px 10px; text-align: right; font-weight: 700; color: #111111;">${formatINR(balanceSheet.totalLiabilitiesPaise)}</td>
-            </tr>
+              <tr style="background: #f5f5f5;">
+                <td colspan="3" style="padding: 8px 10px; font-weight: 700; font-size: 11px; text-transform: uppercase; color: #444;">II. Liabilities</td>
+              </tr>
+              ${
+                balanceSheet.liabilities.length === 0
+                  ? `<tr><td colspan="3" style="padding: 12px 10px; color: #777; font-style: italic;">No liability balances recorded.</td></tr>`
+                  : balanceSheet.liabilities
+                      .map(
+                        (l) => `
+                  <tr style="border-bottom: 1px solid #f0f0f0;">
+                    <td style="padding: 8px 10px; color: #111111;">${l.name}</td>
+                    <td style="padding: 8px 10px; color: #666666;">${l.subType || 'Current Liability'}</td>
+                    <td style="padding: 8px 10px; text-align: right; font-weight: 600; color: #111111;">${formatINR(l.amountPaise)}</td>
+                  </tr>
+                `
+                      )
+                      .join('')
+              }
+              <tr style="border-top: 2px solid #e0e0e0; background-color: #fafafa;">
+                <td colspan="2" style="padding: 8px 10px; font-weight: 700; color: #111111;">Total Liabilities (B)</td>
+                <td style="padding: 8px 10px; text-align: right; font-weight: 700; color: #111111;">${formatINR(balanceSheet.totalLiabilitiesPaise)}</td>
+              </tr>
 
-            <tr style="background: #f5f5f5;">
-              <td colspan="3" style="padding: 8px 10px; font-weight: 700; font-size: 11px; text-transform: uppercase; color: #444;">III. Owner's Equity</td>
-            </tr>
-            ${balanceSheet.equity
-              .map(
-                (eq) => `
-                <tr style="border-bottom: 1px solid #f0f0f0;">
-                  <td style="padding: 8px 10px; color: #111111;">${eq.name}</td>
-                  <td style="padding: 8px 10px; color: #666666;">${eq.subType || 'Capital'}</td>
-                  <td style="padding: 8px 10px; text-align: right; font-weight: 600; color: #111111;">${formatINR(eq.amountPaise)}</td>
-                </tr>
-              `
-              )
-              .join('')}
-            <tr style="border-top: 2px solid #e0e0e0; background-color: #fafafa;">
-              <td colspan="2" style="padding: 8px 10px; font-weight: 700; color: #111111;">Total Equity & Reserves (C)</td>
-              <td style="padding: 8px 10px; text-align: right; font-weight: 700; color: #111111;">${formatINR(balanceSheet.totalEquityPaise)}</td>
-            </tr>
+              <tr style="background: #f5f5f5;">
+                <td colspan="3" style="padding: 8px 10px; font-weight: 700; font-size: 11px; text-transform: uppercase; color: #444;">III. Owner's Equity</td>
+              </tr>
+              ${balanceSheet.equity
+                .map(
+                  (eq) => `
+                  <tr style="border-bottom: 1px solid #f0f0f0;">
+                    <td style="padding: 8px 10px; color: #111111;">${eq.name}</td>
+                    <td style="padding: 8px 10px; color: #666666;">${eq.subType || 'Capital'}</td>
+                    <td style="padding: 8px 10px; text-align: right; font-weight: 600; color: #111111;">${formatINR(eq.amountPaise)}</td>
+                  </tr>
+                `
+                )
+                .join('')}
+              <tr style="border-top: 2px solid #e0e0e0; background-color: #fafafa;">
+                <td colspan="2" style="padding: 8px 10px; font-weight: 700; color: #111111;">Total Equity & Reserves (C)</td>
+                <td style="padding: 8px 10px; text-align: right; font-weight: 700; color: #111111;">${formatINR(balanceSheet.totalEquityPaise)}</td>
+              </tr>
 
-            <tr style="border-top: 2px solid #111111; background-color: #e8f0fe;">
-              <td colspan="2" style="padding: 10px; font-weight: 800; font-size: 14px; color: #111111;">Total Liabilities & Equity (B + C)</td>
-              <td style="padding: 10px; text-align: right; font-weight: 800; font-size: 14px; color: #111111;">${formatINR(balanceSheet.totalLiabilitiesPaise + balanceSheet.totalEquityPaise)}</td>
-            </tr>
-          </tbody>
-        </table>
+              <tr style="border-top: 2px solid #111111; background-color: #e8f0fe;">
+                <td colspan="2" style="padding: 10px; font-weight: 800; font-size: 14px; color: #111111;">Total Liabilities & Equity (B + C)</td>
+                <td style="padding: 10px; text-align: right; font-weight: 800; font-size: 14px; color: #111111;">${formatINR(balanceSheet.totalLiabilitiesPaise + balanceSheet.totalEquityPaise)}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       `;
       break;
     }
@@ -318,41 +322,43 @@ export function generateFinancialReportHtml(options: ReportGeneratorOptions): st
       `;
 
       reportDetailHtml = `
-        <table style="width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px;">
-          <thead>
-            <tr style="background-color: #fafafa; border-bottom: 2px solid #111111;">
-              <th style="padding: 10px; text-align: left; font-weight: 700; color: #111111; text-transform: uppercase; font-size: 11px;">Code</th>
-              <th style="padding: 10px; text-align: left; font-weight: 700; color: #111111; text-transform: uppercase; font-size: 11px;">Account Name</th>
-              <th style="padding: 10px; text-align: left; font-weight: 700; color: #111111; text-transform: uppercase; font-size: 11px;">Type</th>
-              <th style="padding: 10px; text-align: right; font-weight: 700; color: #111111; text-transform: uppercase; font-size: 11px;">Debit (INR)</th>
-              <th style="padding: 10px; text-align: right; font-weight: 700; color: #111111; text-transform: uppercase; font-size: 11px;">Credit (INR)</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${
-              trialBalance.rows.length === 0
-                ? `<tr><td colspan="5" style="padding: 14px 10px; color: #777; font-style: italic; text-align: center;">All accounts currently have zero balances.</td></tr>`
-                : trialBalance.rows
-                    .map(
-                      (row) => `
-                <tr style="border-bottom: 1px solid #f0f0f0;">
-                  <td style="padding: 8px 10px; font-family: monospace; font-size: 12px; color: #555;">${row.accountCode}</td>
-                  <td style="padding: 8px 10px; font-weight: 600; color: #111111;">${row.accountName}</td>
-                  <td style="padding: 8px 10px; color: #666666;">${row.type}</td>
-                  <td style="padding: 8px 10px; text-align: right; font-weight: ${row.debitPaise > 0 ? '600' : '400'}; color: #111111;">${row.debitPaise > 0 ? formatINR(row.debitPaise) : '—'}</td>
-                  <td style="padding: 8px 10px; text-align: right; font-weight: ${row.creditPaise > 0 ? '600' : '400'}; color: #111111;">${row.creditPaise > 0 ? formatINR(row.creditPaise) : '—'}</td>
-                </tr>
-              `
-                    )
-                    .join('')
-            }
-            <tr style="border-top: 2px solid #111111; background-color: #fafafa; font-weight: 800;">
-              <td colspan="3" style="padding: 10px; font-size: 13px; color: #111111;">Grand Totals</td>
-              <td style="padding: 10px; text-align: right; font-size: 13px; color: #111111;">${formatINR(trialBalance.totalDebitPaise)}</td>
-              <td style="padding: 10px; text-align: right; font-size: 13px; color: #111111;">${formatINR(trialBalance.totalCreditPaise)}</td>
-            </tr>
-          </tbody>
-        </table>
+        <div class="table-scroll-container" style="width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch;">
+          <table class="financial-data-table" style="width: 100%; min-width: 460px; border-collapse: collapse; margin-top: 10px; font-size: 13px;">
+            <thead>
+              <tr style="background-color: #fafafa; border-bottom: 2px solid #111111;">
+                <th style="padding: 10px; text-align: left; font-weight: 700; color: #111111; text-transform: uppercase; font-size: 11px;">Code</th>
+                <th style="padding: 10px; text-align: left; font-weight: 700; color: #111111; text-transform: uppercase; font-size: 11px;">Account Name</th>
+                <th style="padding: 10px; text-align: left; font-weight: 700; color: #111111; text-transform: uppercase; font-size: 11px;">Type</th>
+                <th style="padding: 10px; text-align: right; font-weight: 700; color: #111111; text-transform: uppercase; font-size: 11px;">Debit (INR)</th>
+                <th style="padding: 10px; text-align: right; font-weight: 700; color: #111111; text-transform: uppercase; font-size: 11px;">Credit (INR)</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${
+                trialBalance.rows.length === 0
+                  ? `<tr><td colspan="5" style="padding: 14px 10px; color: #777; font-style: italic; text-align: center;">All accounts currently have zero balances.</td></tr>`
+                  : trialBalance.rows
+                      .map(
+                        (row) => `
+                  <tr style="border-bottom: 1px solid #f0f0f0;">
+                    <td style="padding: 8px 10px; font-family: monospace; font-size: 12px; color: #555;">${row.accountCode}</td>
+                    <td style="padding: 8px 10px; font-weight: 600; color: #111111;">${row.accountName}</td>
+                    <td style="padding: 8px 10px; color: #666666;">${row.type}</td>
+                    <td style="padding: 8px 10px; text-align: right; font-weight: ${row.debitPaise > 0 ? '600' : '400'}; color: #111111;">${row.debitPaise > 0 ? formatINR(row.debitPaise) : '—'}</td>
+                    <td style="padding: 8px 10px; text-align: right; font-weight: ${row.creditPaise > 0 ? '600' : '400'}; color: #111111;">${row.creditPaise > 0 ? formatINR(row.creditPaise) : '—'}</td>
+                  </tr>
+                `
+                      )
+                      .join('')
+              }
+              <tr style="border-top: 2px solid #111111; background-color: #fafafa; font-weight: 800;">
+                <td colspan="3" style="padding: 10px; font-size: 13px; color: #111111;">Grand Totals</td>
+                <td style="padding: 10px; text-align: right; font-size: 13px; color: #111111;">${formatINR(trialBalance.totalDebitPaise)}</td>
+                <td style="padding: 10px; text-align: right; font-size: 13px; color: #111111;">${formatINR(trialBalance.totalCreditPaise)}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       `;
       break;
     }
@@ -382,41 +388,43 @@ export function generateFinancialReportHtml(options: ReportGeneratorOptions): st
       `;
 
       reportDetailHtml = `
-        <table style="width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px;">
-          <thead>
-            <tr style="background-color: #fafafa; border-bottom: 2px solid #111111;">
-              <th style="padding: 10px; text-align: left; font-weight: 700; color: #111111; text-transform: uppercase; font-size: 11px;">Customer Name</th>
-              <th style="padding: 10px; text-align: left; font-weight: 700; color: #111111; text-transform: uppercase; font-size: 11px;">GSTIN</th>
-              <th style="padding: 10px; text-align: left; font-weight: 700; color: #111111; text-transform: uppercase; font-size: 11px;">Due Date</th>
-              <th style="padding: 10px; text-align: right; font-weight: 700; color: #111111; text-transform: uppercase; font-size: 11px;">Total Invoice</th>
-              <th style="padding: 10px; text-align: right; font-weight: 700; color: #111111; text-transform: uppercase; font-size: 11px;">Outstanding (INR)</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${
-              invoices.length === 0
-                ? `<tr><td colspan="5" style="padding: 14px 10px; color: #777; font-style: italic; text-align: center;">No customer invoices on record.</td></tr>`
-                : invoices
-                    .map((inv: Invoice) => {
-                      const balance = inv.totalPaise - (inv.amountPaidPaise || 0);
-                      return `
-                <tr style="border-bottom: 1px solid #f0f0f0;">
-                  <td style="padding: 8px 10px; font-weight: 600; color: #111111;">${inv.customerName}</td>
-                  <td style="padding: 8px 10px; font-family: monospace; font-size: 11px; color: #555;">${inv.customerGstin || 'Unregistered'}</td>
-                  <td style="padding: 8px 10px; color: #666666;">${inv.dueDate}</td>
-                  <td style="padding: 8px 10px; text-align: right; color: #666666;">${formatINR(inv.totalPaise)}</td>
-                  <td style="padding: 8px 10px; text-align: right; font-weight: 700; color: ${balance > 0 ? '#c5221f' : '#137333'};">${formatINR(balance)}</td>
-                </tr>
-              `;
-                    })
-                    .join('')
-            }
-            <tr style="border-top: 2px solid #111111; background-color: #fafafa; font-weight: 800;">
-              <td colspan="4" style="padding: 10px; font-size: 13px; color: #111111;">Total Receivables Balance</td>
-              <td style="padding: 10px; text-align: right; font-size: 13px; color: #111111;">${formatINR(totalAR)}</td>
-            </tr>
-          </tbody>
-        </table>
+        <div class="table-scroll-container" style="width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch;">
+          <table class="financial-data-table" style="width: 100%; min-width: 480px; border-collapse: collapse; margin-top: 10px; font-size: 13px;">
+            <thead>
+              <tr style="background-color: #fafafa; border-bottom: 2px solid #111111;">
+                <th style="padding: 10px; text-align: left; font-weight: 700; color: #111111; text-transform: uppercase; font-size: 11px;">Customer Name</th>
+                <th style="padding: 10px; text-align: left; font-weight: 700; color: #111111; text-transform: uppercase; font-size: 11px;">GSTIN</th>
+                <th style="padding: 10px; text-align: left; font-weight: 700; color: #111111; text-transform: uppercase; font-size: 11px;">Due Date</th>
+                <th style="padding: 10px; text-align: right; font-weight: 700; color: #111111; text-transform: uppercase; font-size: 11px;">Total Invoice</th>
+                <th style="padding: 10px; text-align: right; font-weight: 700; color: #111111; text-transform: uppercase; font-size: 11px;">Outstanding (INR)</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${
+                invoices.length === 0
+                  ? `<tr><td colspan="5" style="padding: 14px 10px; color: #777; font-style: italic; text-align: center;">No customer invoices on record.</td></tr>`
+                  : invoices
+                      .map((inv: Invoice) => {
+                        const balance = inv.totalPaise - (inv.amountPaidPaise || 0);
+                        return `
+                  <tr style="border-bottom: 1px solid #f0f0f0;">
+                    <td style="padding: 8px 10px; font-weight: 600; color: #111111;">${inv.customerName}</td>
+                    <td style="padding: 8px 10px; font-family: monospace; font-size: 11px; color: #555;">${inv.customerGstin || 'Unregistered'}</td>
+                    <td style="padding: 8px 10px; color: #666666;">${inv.dueDate}</td>
+                    <td style="padding: 8px 10px; text-align: right; color: #666666;">${formatINR(inv.totalPaise)}</td>
+                    <td style="padding: 8px 10px; text-align: right; font-weight: 700; color: ${balance > 0 ? '#c5221f' : '#137333'};">${formatINR(balance)}</td>
+                  </tr>
+                `;
+                      })
+                      .join('')
+              }
+              <tr style="border-top: 2px solid #111111; background-color: #fafafa; font-weight: 800;">
+                <td colspan="4" style="padding: 10px; font-size: 13px; color: #111111;">Total Receivables Balance</td>
+                <td style="padding: 10px; text-align: right; font-size: 13px; color: #111111;">${formatINR(totalAR)}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       `;
       break;
     }
@@ -441,42 +449,44 @@ export function generateFinancialReportHtml(options: ReportGeneratorOptions): st
       `;
 
       reportDetailHtml = `
-        <table style="width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px;">
-          <thead>
-            <tr style="background-color: #fafafa; border-bottom: 2px solid #111111;">
-              <th style="padding: 10px; text-align: left; font-weight: 700; color: #111111; text-transform: uppercase; font-size: 11px;">Vendor Name</th>
-              <th style="padding: 10px; text-align: left; font-weight: 700; color: #111111; text-transform: uppercase; font-size: 11px;">Bill #</th>
-              <th style="padding: 10px; text-align: left; font-weight: 700; color: #111111; text-transform: uppercase; font-size: 11px;">Due Date</th>
-              <th style="padding: 10px; text-align: right; font-weight: 700; color: #111111; text-transform: uppercase; font-size: 11px;">Bill Total</th>
-              <th style="padding: 10px; text-align: right; font-weight: 700; color: #111111; text-transform: uppercase; font-size: 11px;">Unpaid Balance (INR)</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${
-              bills.length === 0
-                ? `<tr><td colspan="5" style="padding: 14px 10px; color: #777; font-style: italic; text-align: center;">No vendor bills currently open.</td></tr>`
-                : bills
-                    .map((b: VendorBill) => {
-                      const totalBill = b.subtotalPaise + b.taxPaise;
-                      const balance = totalBill - (b.amountPaidPaise || 0);
-                      return `
-                <tr style="border-bottom: 1px solid #f0f0f0;">
-                  <td style="padding: 8px 10px; font-weight: 600; color: #111111;">${b.vendorName}</td>
-                  <td style="padding: 8px 10px; font-family: monospace; font-size: 11px; color: #555;">${b.billNumber}</td>
-                  <td style="padding: 8px 10px; color: #666666;">${b.dueDate}</td>
-                  <td style="padding: 8px 10px; text-align: right; color: #666666;">${formatINR(totalBill)}</td>
-                  <td style="padding: 8px 10px; text-align: right; font-weight: 700; color: ${balance > 0 ? '#c5221f' : '#137333'};">${formatINR(balance)}</td>
-                </tr>
-              `;
-                    })
-                    .join('')
-            }
-            <tr style="border-top: 2px solid #111111; background-color: #fafafa; font-weight: 800;">
-              <td colspan="4" style="padding: 10px; font-size: 13px; color: #111111;">Total Accounts Payable Outstanding</td>
-              <td style="padding: 10px; text-align: right; font-size: 13px; color: #111111;">${formatINR(totalAP)}</td>
-            </tr>
-          </tbody>
-        </table>
+        <div class="table-scroll-container" style="width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch;">
+          <table class="financial-data-table" style="width: 100%; min-width: 480px; border-collapse: collapse; margin-top: 10px; font-size: 13px;">
+            <thead>
+              <tr style="background-color: #fafafa; border-bottom: 2px solid #111111;">
+                <th style="padding: 10px; text-align: left; font-weight: 700; color: #111111; text-transform: uppercase; font-size: 11px;">Vendor Name</th>
+                <th style="padding: 10px; text-align: left; font-weight: 700; color: #111111; text-transform: uppercase; font-size: 11px;">Bill #</th>
+                <th style="padding: 10px; text-align: left; font-weight: 700; color: #111111; text-transform: uppercase; font-size: 11px;">Due Date</th>
+                <th style="padding: 10px; text-align: right; font-weight: 700; color: #111111; text-transform: uppercase; font-size: 11px;">Bill Total</th>
+                <th style="padding: 10px; text-align: right; font-weight: 700; color: #111111; text-transform: uppercase; font-size: 11px;">Unpaid Balance (INR)</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${
+                bills.length === 0
+                  ? `<tr><td colspan="5" style="padding: 14px 10px; color: #777; font-style: italic; text-align: center;">No vendor bills currently open.</td></tr>`
+                  : bills
+                      .map((b: VendorBill) => {
+                        const totalBill = b.subtotalPaise + b.taxPaise;
+                        const balance = totalBill - (b.amountPaidPaise || 0);
+                        return `
+                  <tr style="border-bottom: 1px solid #f0f0f0;">
+                    <td style="padding: 8px 10px; font-weight: 600; color: #111111;">${b.vendorName}</td>
+                    <td style="padding: 8px 10px; font-family: monospace; font-size: 11px; color: #555;">${b.billNumber}</td>
+                    <td style="padding: 8px 10px; color: #666666;">${b.dueDate}</td>
+                    <td style="padding: 8px 10px; text-align: right; color: #666666;">${formatINR(totalBill)}</td>
+                    <td style="padding: 8px 10px; text-align: right; font-weight: 700; color: ${balance > 0 ? '#c5221f' : '#137333'};">${formatINR(balance)}</td>
+                  </tr>
+                `;
+                      })
+                      .join('')
+              }
+              <tr style="border-top: 2px solid #111111; background-color: #fafafa; font-weight: 800;">
+                <td colspan="4" style="padding: 10px; font-size: 13px; color: #111111;">Total Accounts Payable Outstanding</td>
+                <td style="padding: 10px; text-align: right; font-size: 13px; color: #111111;">${formatINR(totalAP)}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       `;
       break;
     }
@@ -516,37 +526,39 @@ export function generateFinancialReportHtml(options: ReportGeneratorOptions): st
       `;
 
       reportDetailHtml = `
-        <table style="width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px;">
-          <thead>
-            <tr style="background-color: #fafafa; border-bottom: 2px solid #111111;">
-              <th style="padding: 10px; text-align: left; font-weight: 700; color: #111111; text-transform: uppercase; font-size: 11px;">GSTR-3B Classification</th>
-              <th style="padding: 10px; text-align: right; font-weight: 700; color: #111111; text-transform: uppercase; font-size: 11px;">IGST (INR)</th>
-              <th style="padding: 10px; text-align: right; font-weight: 700; color: #111111; text-transform: uppercase; font-size: 11px;">CGST (INR)</th>
-              <th style="padding: 10px; text-align: right; font-weight: 700; color: #111111; text-transform: uppercase; font-size: 11px;">SGST (INR)</th>
-              <th style="padding: 10px; text-align: right; font-weight: 700; color: #111111; text-transform: uppercase; font-size: 11px;">Total Tax (INR)</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr style="border-bottom: 1px solid #f0f0f0;">
-              <td style="padding: 8px 10px; font-weight: 600; color: #111111;">3.1 Outward Taxable Supplies</td>
-              <td style="padding: 8px 10px; text-align: right; color: #111111;">${formatINR(outputIgst)}</td>
-              <td style="padding: 8px 10px; text-align: right; color: #111111;">${formatINR(outputCgst)}</td>
-              <td style="padding: 8px 10px; text-align: right; color: #111111;">${formatINR(outputSgst)}</td>
-              <td style="padding: 8px 10px; text-align: right; font-weight: 700; color: #111111;">${formatINR(totalOutputGst)}</td>
-            </tr>
-            <tr style="border-bottom: 1px solid #f0f0f0;">
-              <td style="padding: 8px 10px; font-weight: 600; color: #137333;">4.0 Eligible Input Tax Credit (ITC)</td>
-              <td style="padding: 8px 10px; text-align: right; color: #137333;">${formatINR(inputIgst)}</td>
-              <td style="padding: 8px 10px; text-align: right; color: #137333;">${formatINR(inputCgst)}</td>
-              <td style="padding: 8px 10px; text-align: right; color: #137333;">${formatINR(inputSgst)}</td>
-              <td style="padding: 8px 10px; text-align: right; font-weight: 700; color: #137333;">${formatINR(totalItc)}</td>
-            </tr>
-            <tr style="border-top: 2px solid #111111; background-color: #fafafa; font-weight: 800;">
-              <td colspan="4" style="padding: 10px; font-size: 13px; color: #111111;">Net Cash Tax Payable (Electronic Cash Ledger)</td>
-              <td style="padding: 10px; text-align: right; font-size: 13px; color: ${netCashPayable > 0 ? '#c5221f' : '#137333'};">${formatINR(netCashPayable)}</td>
-            </tr>
-          </tbody>
-        </table>
+        <div class="table-scroll-container" style="width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch;">
+          <table class="financial-data-table" style="width: 100%; min-width: 480px; border-collapse: collapse; margin-top: 10px; font-size: 13px;">
+            <thead>
+              <tr style="background-color: #fafafa; border-bottom: 2px solid #111111;">
+                <th style="padding: 10px; text-align: left; font-weight: 700; color: #111111; text-transform: uppercase; font-size: 11px;">GSTR-3B Classification</th>
+                <th style="padding: 10px; text-align: right; font-weight: 700; color: #111111; text-transform: uppercase; font-size: 11px;">IGST (INR)</th>
+                <th style="padding: 10px; text-align: right; font-weight: 700; color: #111111; text-transform: uppercase; font-size: 11px;">CGST (INR)</th>
+                <th style="padding: 10px; text-align: right; font-weight: 700; color: #111111; text-transform: uppercase; font-size: 11px;">SGST (INR)</th>
+                <th style="padding: 10px; text-align: right; font-weight: 700; color: #111111; text-transform: uppercase; font-size: 11px;">Total Tax (INR)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr style="border-bottom: 1px solid #f0f0f0;">
+                <td style="padding: 8px 10px; font-weight: 600; color: #111111;">3.1 Outward Taxable Supplies</td>
+                <td style="padding: 8px 10px; text-align: right; color: #111111;">${formatINR(outputIgst)}</td>
+                <td style="padding: 8px 10px; text-align: right; color: #111111;">${formatINR(outputCgst)}</td>
+                <td style="padding: 8px 10px; text-align: right; color: #111111;">${formatINR(outputSgst)}</td>
+                <td style="padding: 8px 10px; text-align: right; font-weight: 700; color: #111111;">${formatINR(totalOutputGst)}</td>
+              </tr>
+              <tr style="border-bottom: 1px solid #f0f0f0;">
+                <td style="padding: 8px 10px; font-weight: 600; color: #137333;">4.0 Eligible Input Tax Credit (ITC)</td>
+                <td style="padding: 8px 10px; text-align: right; color: #137333;">${formatINR(inputIgst)}</td>
+                <td style="padding: 8px 10px; text-align: right; color: #137333;">${formatINR(inputCgst)}</td>
+                <td style="padding: 8px 10px; text-align: right; color: #137333;">${formatINR(inputSgst)}</td>
+                <td style="padding: 8px 10px; text-align: right; font-weight: 700; color: #137333;">${formatINR(totalItc)}</td>
+              </tr>
+              <tr style="border-top: 2px solid #111111; background-color: #fafafa; font-weight: 800;">
+                <td colspan="4" style="padding: 10px; font-size: 13px; color: #111111;">Net Cash Tax Payable (Electronic Cash Ledger)</td>
+                <td style="padding: 10px; text-align: right; font-size: 13px; color: ${netCashPayable > 0 ? '#c5221f' : '#137333'};">${formatINR(netCashPayable)}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       `;
       break;
     }
@@ -599,36 +611,42 @@ export function generateFinancialReportHtml(options: ReportGeneratorOptions): st
       reportDetailHtml = `
         <div style="margin-top: 16px;">
           <!-- Section A: P&L -->
-          <div style="background: #111; color: #fff; padding: 8px 12px; font-weight: 800; font-size: 12px; letter-spacing: 0.5px; margin-bottom: 8px;">
+          <div style="background: #111; color: #fff; padding: 8px 12px; font-weight: 800; font-size: 12px; letter-spacing: 0.5px; margin-bottom: 8px; border-radius: 4px;">
             I. STATEMENT OF PROFIT AND LOSS (Ind AS Accrual)
           </div>
-          <table style="width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 20px;">
-            <tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px;">Operating Revenue from Invoices</td><td align="right" style="font-weight: 700;">${formatINR(pnl.totalRevenuePaise)}</td></tr>
-            <tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px;">Direct Material & Operating Expenditure</td><td align="right" style="color: #c5221f;">- ${formatINR(pnl.directCostsPaise + pnl.operatingExpensesPaise + pnl.taxExpensePaise)}</td></tr>
-            <tr style="background: #e6f4ea; font-weight: 800;"><td style="padding: 10px; color: #137333;">Net Realized Profit After Tax (PAT)</td><td align="right" style="padding: 10px; color: #137333; font-size: 14px;">${formatINR(pnl.netProfitPaise)}</td></tr>
-          </table>
+          <div class="table-scroll-container" style="width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch;">
+            <table class="financial-data-table" style="width: 100%; min-width: 420px; border-collapse: collapse; font-size: 12px; margin-bottom: 20px;">
+              <tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px;">Operating Revenue from Invoices</td><td align="right" style="font-weight: 700;">${formatINR(pnl.totalRevenuePaise)}</td></tr>
+              <tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px;">Direct Material & Operating Expenditure</td><td align="right" style="color: #c5221f;">- ${formatINR(pnl.directCostsPaise + pnl.operatingExpensesPaise + pnl.taxExpensePaise)}</td></tr>
+              <tr style="background: #e6f4ea; font-weight: 800;"><td style="padding: 10px; color: #137333;">Net Realized Profit After Tax (PAT)</td><td align="right" style="padding: 10px; color: #137333; font-size: 14px;">${formatINR(pnl.netProfitPaise)}</td></tr>
+            </table>
+          </div>
 
           <!-- Section B: Balance Sheet -->
-          <div style="background: #111; color: #fff; padding: 8px 12px; font-weight: 800; font-size: 12px; letter-spacing: 0.5px; margin-bottom: 8px;">
+          <div style="background: #111; color: #fff; padding: 8px 12px; font-weight: 800; font-size: 12px; letter-spacing: 0.5px; margin-bottom: 8px; border-radius: 4px;">
             II. BALANCE SHEET (STATEMENT OF FINANCIAL POSITION)
           </div>
-          <table style="width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 20px;">
-            <tr style="border-bottom: 2px solid #111; font-weight: 700; background: #fafaf8;"><td style="padding: 8px;">TOTAL ASSETS (A)</td><td align="right">${formatINR(balanceSheet.totalAssetsPaise)}</td></tr>
-            <tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px;">Total Liabilities (Obligations)</td><td align="right">${formatINR(balanceSheet.totalLiabilitiesPaise)}</td></tr>
-            <tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px;">Total Equity & Retained Earnings</td><td align="right">${formatINR(balanceSheet.totalEquityPaise)}</td></tr>
-            <tr style="border-bottom: 2px solid #111; font-weight: 700; background: #fafaf8;"><td style="padding: 8px;">TOTAL LIABILITIES & EQUITY (B)</td><td align="right">${formatINR(balanceSheet.totalLiabilitiesPaise + balanceSheet.totalEquityPaise)}</td></tr>
-          </table>
+          <div class="table-scroll-container" style="width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch;">
+            <table class="financial-data-table" style="width: 100%; min-width: 420px; border-collapse: collapse; font-size: 12px; margin-bottom: 20px;">
+              <tr style="border-bottom: 2px solid #111; font-weight: 700; background: #fafaf8;"><td style="padding: 8px;">TOTAL ASSETS (A)</td><td align="right">${formatINR(balanceSheet.totalAssetsPaise)}</td></tr>
+              <tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px;">Total Liabilities (Obligations)</td><td align="right">${formatINR(balanceSheet.totalLiabilitiesPaise)}</td></tr>
+              <tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px;">Total Equity & Retained Earnings</td><td align="right">${formatINR(balanceSheet.totalEquityPaise)}</td></tr>
+              <tr style="border-bottom: 2px solid #111; font-weight: 700; background: #fafaf8;"><td style="padding: 8px;">TOTAL LIABILITIES & EQUITY (B)</td><td align="right">${formatINR(balanceSheet.totalLiabilitiesPaise + balanceSheet.totalEquityPaise)}</td></tr>
+            </table>
+          </div>
 
           <!-- Section C: Statutory GST -->
-          <div style="background: #111; color: #fff; padding: 8px 12px; font-weight: 800; font-size: 12px; letter-spacing: 0.5px; margin-bottom: 8px;">
+          <div style="background: #111; color: #fff; padding: 8px 12px; font-weight: 800; font-size: 12px; letter-spacing: 0.5px; margin-bottom: 8px; border-radius: 4px;">
             III. GSTR-3B STATUTORY TAX PREPARATION
           </div>
-          <table style="width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 20px;">
-            <tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px;">3.1 Outward Taxable Turnover</td><td align="right">${formatINR(outwardTaxable)}</td></tr>
-            <tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px;">Total Output GST Liability</td><td align="right">${formatINR(totalOutputGst)}</td></tr>
-            <tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px;">Eligible Input Tax Credit (ITC Claimed)</td><td align="right" style="color: #137333;">- ${formatINR(totalItc)}</td></tr>
-            <tr style="background: #fafaf8; font-weight: 800;"><td style="padding: 10px;">Net Cash Tax Payable (Electronic Cash Ledger)</td><td align="right" style="padding: 10px; color: ${netCashPayable > 0 ? '#c5221f' : '#137333'}; font-size: 14px;">${formatINR(netCashPayable)}</td></tr>
-          </table>
+          <div class="table-scroll-container" style="width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch;">
+            <table class="financial-data-table" style="width: 100%; min-width: 420px; border-collapse: collapse; font-size: 12px; margin-bottom: 20px;">
+              <tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px;">3.1 Outward Taxable Turnover</td><td align="right">${formatINR(outwardTaxable)}</td></tr>
+              <tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px;">Total Output GST Liability</td><td align="right">${formatINR(totalOutputGst)}</td></tr>
+              <tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px;">Eligible Input Tax Credit (ITC Claimed)</td><td align="right" style="color: #137333;">- ${formatINR(totalItc)}</td></tr>
+              <tr style="background: #fafaf8; font-weight: 800;"><td style="padding: 10px;">Net Cash Tax Payable (Electronic Cash Ledger)</td><td align="right" style="padding: 10px; color: ${netCashPayable > 0 ? '#c5221f' : '#137333'}; font-size: 14px;">${formatINR(netCashPayable)}</td></tr>
+            </table>
+          </div>
         </div>
       `;
       break;
@@ -852,31 +870,33 @@ export function generateFinancialReportHtml(options: ReportGeneratorOptions): st
   let bankAccountsTableHtml = '';
   if (liquidAccounts.length > 0) {
     bankAccountsTableHtml = `
-      <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
-        <thead>
-          <tr style="background-color: #fafafa; border-bottom: 2px solid #111111;">
-            <th style="padding: 9px 10px; text-align: left; font-weight: 700; color: #111111; text-transform: uppercase; font-size: 11px;">Account & Institution</th>
-            <th style="padding: 9px 10px; text-align: left; font-weight: 700; color: #111111; text-transform: uppercase; font-size: 11px;">Code / Type</th>
-            <th style="padding: 9px 10px; text-align: right; font-weight: 700; color: #111111; text-transform: uppercase; font-size: 11px;">Reconciled Balance</th>
-            <th style="padding: 9px 10px; text-align: right; font-weight: 700; color: #111111; text-transform: uppercase; font-size: 11px;">Status</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${liquidAccounts
-            .slice(0, 5)
-            .map(
-              (acc) => `
-            <tr style="border-bottom: 1px solid #f0f0f0;">
-              <td style="padding: 9px 10px; color: #111111; font-weight: 600;">${acc.name}</td>
-              <td style="padding: 9px 10px; color: #64748b; font-size: 12px;">${acc.code}</td>
-              <td style="padding: 9px 10px; text-align: right; font-weight: 700; color: #111111;">${formatINR(acc.balancePaise)}</td>
-              <td style="padding: 9px 10px; text-align: right; color: #15803d; font-size: 12px; font-weight: 600;">Active · Reconciled</td>
+      <div class="table-scroll-container" style="width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch;">
+        <table class="financial-data-table" style="width: 100%; min-width: 480px; border-collapse: collapse; font-size: 13px;">
+          <thead>
+            <tr style="background-color: #fafafa; border-bottom: 2px solid #111111;">
+              <th style="padding: 9px 10px; text-align: left; font-weight: 700; color: #111111; text-transform: uppercase; font-size: 11px;">Account & Institution</th>
+              <th style="padding: 9px 10px; text-align: left; font-weight: 700; color: #111111; text-transform: uppercase; font-size: 11px;">Code / Type</th>
+              <th style="padding: 9px 10px; text-align: right; font-weight: 700; color: #111111; text-transform: uppercase; font-size: 11px;">Reconciled Balance</th>
+              <th style="padding: 9px 10px; text-align: right; font-weight: 700; color: #111111; text-transform: uppercase; font-size: 11px;">Status</th>
             </tr>
-          `
-            )
-            .join('')}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            ${liquidAccounts
+              .slice(0, 5)
+              .map(
+                (acc) => `
+              <tr style="border-bottom: 1px solid #f0f0f0;">
+                <td style="padding: 9px 10px; color: #111111; font-weight: 600;">${acc.name}</td>
+                <td style="padding: 9px 10px; color: #64748b; font-size: 12px;">${acc.code}</td>
+                <td style="padding: 9px 10px; text-align: right; font-weight: 700; color: #111111;">${formatINR(acc.balancePaise)}</td>
+                <td style="padding: 9px 10px; text-align: right; color: #15803d; font-size: 12px; font-weight: 600;">Active · Reconciled</td>
+              </tr>
+            `
+              )
+              .join('')}
+          </tbody>
+        </table>
+      </div>
     `;
   } else {
     bankAccountsTableHtml = `
@@ -888,23 +908,140 @@ export function generateFinancialReportHtml(options: ReportGeneratorOptions): st
 
   return `
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="x-apple-disable-message-reformatting">
+  <meta name="format-detection" content="telephone=no, date=no, address=no, email=no">
   <title>${reportName} — Zawr Industries</title>
+  <style>
+    /* Reset & Base Styles */
+    html, body {
+      margin: 0 !important;
+      padding: 0 !important;
+      height: 100% !important;
+      width: 100% !important;
+      -webkit-text-size-adjust: 100%;
+      -ms-text-size-adjust: 100%;
+    }
+    table, td {
+      mso-table-lspace: 0pt;
+      mso-table-rspace: 0pt;
+    }
+    img {
+      -ms-interpolation-mode: bicubic;
+      border: 0;
+      outline: none;
+      text-decoration: none;
+    }
+
+    /* Mobile Responsive Breakpoints */
+    @media only screen and (max-width: 600px) {
+      .email-outer-body {
+        padding: 10px 6px !important;
+      }
+      .email-container {
+        padding: 20px 14px !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        border-radius: 6px !important;
+        box-sizing: border-box !important;
+      }
+      .header-logo-img {
+        height: 26px !important;
+        max-height: 26px !important;
+        width: auto !important;
+      }
+      .header-badge-cell {
+        font-size: 9px !important;
+        letter-spacing: 0.8px !important;
+        line-height: 20px !important;
+      }
+      .main-title {
+        font-size: 18px !important;
+        line-height: 1.25 !important;
+        margin: 0 0 12px 0 !important;
+      }
+      .section-title {
+        font-size: 13.5px !important;
+        margin: 24px 0 10px 0 !important;
+      }
+      .metric-label {
+        font-size: 12px !important;
+        padding: 8px 4px 8px 0 !important;
+      }
+      .metric-val {
+        font-size: 12px !important;
+        padding: 8px 0 8px 4px !important;
+      }
+      .stack-col {
+        display: block !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+        border-right: none !important;
+        border-bottom: 1px solid #f0f0f0 !important;
+        padding: 16px 12px !important;
+      }
+      .stack-col-last {
+        display: block !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+        padding: 16px 12px !important;
+      }
+      .table-scroll-container {
+        width: 100% !important;
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+        display: block !important;
+        margin: 6px 0 14px 0 !important;
+      }
+      .financial-data-table {
+        min-width: 440px !important;
+        width: 100% !important;
+      }
+      .financial-data-table th,
+      .financial-data-table td {
+        padding: 7px 6px !important;
+        font-size: 11.5px !important;
+      }
+      .wc-strip-cell {
+        display: block !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+        text-align: left !important;
+        padding: 8px 12px !important;
+        border-bottom: 1px solid #e2e8f0 !important;
+      }
+      .wc-strip-cell-last {
+        display: block !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+        text-align: left !important;
+        padding: 8px 12px !important;
+      }
+      .assurance-label,
+      .assurance-value {
+        font-size: 11.5px !important;
+        padding: 8px 0 !important;
+      }
+    }
+  </style>
 </head>
-<body style="margin: 0; padding: 30px 15px; background-color: #f7f7f7; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #111111;">
-  <div style="max-width: 680px; margin: 0 auto; background-color: #ffffff; padding: 40px 36px; border: 1px solid #e0e0e0; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
+<body class="email-outer-body" style="margin: 0; padding: 30px 15px; background-color: #f7f7f7; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #111111; -webkit-font-smoothing: antialiased;">
+  <div class="email-container" style="max-width: 680px; width: 100%; margin: 0 auto; background-color: #ffffff; padding: 40px 36px; border: 1px solid #e0e0e0; box-shadow: 0 1px 3px rgba(0,0,0,0.04); box-sizing: border-box; border-radius: 8px;">
     
     <!-- Top Executive Header (Table-based for complete Gmail & Outlook email client compatibility) -->
-    <table role="presentation" width="100%" border="0" cellpadding="0" cellspacing="0" style="width: 100%; border-collapse: collapse;">
+    <table role="presentation" width="100%" border="0" cellpadding="0" cellspacing="0" class="header-table" style="width: 100%; border-collapse: collapse;">
       <tr>
-        <td align="left" valign="middle" style="padding: 0;">
+        <td align="left" valign="middle" class="header-logo-cell" style="padding: 0;">
           <table role="presentation" border="0" cellpadding="0" cellspacing="0">
             <tr>
               <td valign="middle">
-                <img src="cid:zawr-brand-logo" alt="ZAWR BOOKS — ZAWR INDUSTRIES" height="34" style="display: block; height: 34px; width: auto; max-width: 230px; border: 0; outline: none; text-decoration: none;" />
+                <img src="cid:zawr-brand-logo" alt="ZAWR BOOKS — ZAWR INDUSTRIES" height="34" class="header-logo-img" style="display: block; height: 34px; width: auto; max-width: 230px; border: 0; outline: none; text-decoration: none;" />
               </td>
             </tr>
           </table>
@@ -912,7 +1049,7 @@ export function generateFinancialReportHtml(options: ReportGeneratorOptions): st
             ZAWR INDUSTRIES
           </div>
         </td>
-        <td align="right" valign="middle" style="font-size: 11px; font-weight: 600; color: #5f6368; letter-spacing: 1.5px; text-transform: uppercase; white-space: nowrap; line-height: 24px; padding: 0;">
+        <td align="right" valign="middle" class="header-badge-cell" style="font-size: 11px; font-weight: 600; color: #5f6368; letter-spacing: 1.5px; text-transform: uppercase; white-space: nowrap; line-height: 24px; padding: 0;">
           EXECUTIVE FINANCIAL REPORT
         </td>
       </tr>
@@ -921,7 +1058,7 @@ export function generateFinancialReportHtml(options: ReportGeneratorOptions): st
     <div style="height: 1px; background-color: #ebebeb; margin-top: 14px; margin-bottom: 26px;"></div>
 
     <!-- Title & Greeting -->
-    <h1 style="font-size: 22px; font-weight: 700; color: #111111; margin: 0 0 16px 0; line-height: 1.25;">
+    <h1 class="main-title" style="font-size: 22px; font-weight: 700; color: #111111; margin: 0 0 16px 0; line-height: 1.25;">
       ${displayTitle}
     </h1>
 
@@ -934,12 +1071,12 @@ export function generateFinancialReportHtml(options: ReportGeneratorOptions): st
     </p>
 
     <!-- Top Key Metrics Table -->
-    <table style="width: 100%; border-collapse: collapse; margin-bottom: 28px;">
+    <table class="metrics-table" style="width: 100%; border-collapse: collapse; margin-bottom: 28px;">
       ${topMetricsRowsHtml}
     </table>
 
     <!-- Section 1: Detailed Report Breakdown -->
-    <h2 style="font-size: 15px; font-weight: 700; color: #111111; margin: 30px 0 10px 0;">
+    <h2 class="section-title" style="font-size: 15px; font-weight: 700; color: #111111; margin: 30px 0 10px 0;">
       1. ${reportName} Detail Ledger Breakdown
     </h2>
     <div style="margin-bottom: 26px;">
@@ -947,18 +1084,18 @@ export function generateFinancialReportHtml(options: ReportGeneratorOptions): st
     </div>
 
     <!-- Section 2: Financial Performance & Visual Trajectory (Matching Reference Image Layout) -->
-    <h2 style="font-size: 15px; font-weight: 700; color: #111111; margin: 32px 0 14px 0;">
+    <h2 class="section-title" style="font-size: 15px; font-weight: 700; color: #111111; margin: 32px 0 14px 0;">
       2. Financial Performance & Visual Trajectory
     </h2>
-    <table role="presentation" width="100%" border="0" cellpadding="0" cellspacing="0" style="width: 100%; border-collapse: collapse; border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden; background-color: #ffffff; margin-bottom: 28px;">
+    <table role="presentation" width="100%" border="0" cellpadding="0" cellspacing="0" class="performance-card-table" style="width: 100%; border-collapse: collapse; border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden; background-color: #ffffff; margin-bottom: 28px;">
       <tr>
         <!-- Left Column: Visual Chart / Trend -->
-        <td width="58%" valign="top" style="padding: 20px 16px; border-right: 1px solid #f0f0f0;">
+        <td class="stack-col" width="58%" valign="top" style="padding: 20px 16px; border-right: 1px solid #f0f0f0;">
           ${chartLeftHtml}
         </td>
 
         <!-- Right Column: MAX. ACHIEVED card + Invoices list directly underneath -->
-        <td width="42%" valign="top" style="padding: 20px 16px; background-color: #ffffff;">
+        <td class="stack-col-last" width="42%" valign="top" style="padding: 20px 16px; background-color: #ffffff;">
           
           <!-- Top Card: MAX. ACHIEVED matching reference image -->
           <table role="presentation" width="100%" border="0" cellpadding="0" cellspacing="0" style="width: 100%; border-collapse: collapse; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px; box-shadow: 0 1px 2px rgba(0,0,0,0.03);">
@@ -1004,22 +1141,22 @@ export function generateFinancialReportHtml(options: ReportGeneratorOptions): st
     </table>
 
     <!-- Section 3: Working Capital & Liquid Cash Reserves -->
-    <h2 style="font-size: 15px; font-weight: 700; color: #111111; margin: 32px 0 12px 0;">
+    <h2 class="section-title" style="font-size: 15px; font-weight: 700; color: #111111; margin: 32px 0 12px 0;">
       3. Working Capital & Liquid Cash Reserves
     </h2>
     <div style="margin-bottom: 24px;">
       ${bankAccountsTableHtml}
 
       <!-- Working Capital Summary Strip -->
-      <table role="presentation" width="100%" border="0" cellpadding="0" cellspacing="0" style="width: 100%; border-collapse: collapse; margin-top: 12px; background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px;">
+      <table role="presentation" width="100%" border="0" cellpadding="0" cellspacing="0" class="wc-strip-table" style="width: 100%; border-collapse: collapse; margin-top: 12px; background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px;">
         <tr>
-          <td style="padding: 10px 14px; font-size: 12px; color: #475569;">
+          <td class="wc-strip-cell" style="padding: 10px 14px; font-size: 12px; color: #475569;">
             <strong>Current Assets:</strong> ${formatINR(currentAssetsPaise)}
           </td>
-          <td style="padding: 10px 14px; font-size: 12px; color: #475569;">
+          <td class="wc-strip-cell" style="padding: 10px 14px; font-size: 12px; color: #475569;">
             <strong>Current Liabilities:</strong> ${formatINR(currentLiabilitiesPaise)}
           </td>
-          <td align="right" style="padding: 10px 14px; font-size: 12px; font-weight: 700; color: ${netWorkingCapitalPaise >= 0 ? '#15803d' : '#b91c1c'};">
+          <td class="wc-strip-cell-last" align="right" style="padding: 10px 14px; font-size: 12px; font-weight: 700; color: ${netWorkingCapitalPaise >= 0 ? '#15803d' : '#b91c1c'};">
             <strong>Net Working Capital:</strong> ${formatINR(netWorkingCapitalPaise)}
           </td>
         </tr>
@@ -1027,25 +1164,25 @@ export function generateFinancialReportHtml(options: ReportGeneratorOptions): st
     </div>
 
     <!-- Section 4: Statutory Tax & Accounting Invariant Assurance -->
-    <h2 style="font-size: 15px; font-weight: 700; color: #111111; margin: 32px 0 12px 0;">
+    <h2 class="section-title" style="font-size: 15px; font-weight: 700; color: #111111; margin: 32px 0 12px 0;">
       4. Statutory Tax & Accounting Invariant Assurance
     </h2>
-    <table style="width: 100%; border-collapse: collapse; margin-bottom: 16px;">
+    <table class="assurance-table" style="width: 100%; border-collapse: collapse; margin-bottom: 16px;">
       <tr>
-        <td style="padding: 10px 0; border-top: 1px solid #f0f0f0; color: #475569; font-size: 13px;">Double-Entry Equilibrium Invariant</td>
-        <td style="padding: 10px 0; border-top: 1px solid #f0f0f0; color: #15803d; font-weight: 700; font-size: 13px; text-align: right;">100% Balanced (Zero Discrepancy, Δ = ₹0.00)</td>
+        <td class="assurance-label" style="padding: 10px 0; border-top: 1px solid #f0f0f0; color: #475569; font-size: 13px;">Double-Entry Equilibrium Invariant</td>
+        <td class="assurance-value" style="padding: 10px 0; border-top: 1px solid #f0f0f0; color: #15803d; font-weight: 700; font-size: 13px; text-align: right;">100% Balanced (Zero Discrepancy, Δ = ₹0.00)</td>
       </tr>
       <tr>
-        <td style="padding: 10px 0; border-top: 1px solid #f0f0f0; color: #475569; font-size: 13px;">Indian Accounting Standard (Ind AS)</td>
-        <td style="padding: 10px 0; border-top: 1px solid #f0f0f0; color: #111111; font-weight: 700; font-size: 13px; text-align: right;">Schedule III Accrual Basis Compliant</td>
+        <td class="assurance-label" style="padding: 10px 0; border-top: 1px solid #f0f0f0; color: #475569; font-size: 13px;">Indian Accounting Standard (Ind AS)</td>
+        <td class="assurance-value" style="padding: 10px 0; border-top: 1px solid #f0f0f0; color: #111111; font-weight: 700; font-size: 13px; text-align: right;">Schedule III Accrual Basis Compliant</td>
       </tr>
       <tr>
-        <td style="padding: 10px 0; border-top: 1px solid #f0f0f0; color: #475569; font-size: 13px;">GST Statutory Return Reconciliation</td>
-        <td style="padding: 10px 0; border-top: 1px solid #f0f0f0; color: #111111; font-weight: 700; font-size: 13px; text-align: right;">GSTR-1 Outward Supplies reconciled with GSTR-3B</td>
+        <td class="assurance-label" style="padding: 10px 0; border-top: 1px solid #f0f0f0; color: #475569; font-size: 13px;">GST Statutory Return Reconciliation</td>
+        <td class="assurance-value" style="padding: 10px 0; border-top: 1px solid #f0f0f0; color: #111111; font-weight: 700; font-size: 13px; text-align: right;">GSTR-1 Outward Supplies reconciled with GSTR-3B</td>
       </tr>
       <tr>
-        <td style="padding: 10px 0; border-top: 1px solid #f0f0f0; color: #475569; font-size: 13px;">Cryptographic Ledger Audit Trail</td>
-        <td style="padding: 10px 0; border-top: 1px solid #f0f0f0; color: #111111; font-weight: 700; font-size: 13px; text-align: right;">SHA-256 Synchronized · Immutable Journal Sequence</td>
+        <td class="assurance-label" style="padding: 10px 0; border-top: 1px solid #f0f0f0; color: #475569; font-size: 13px;">Cryptographic Ledger Audit Trail</td>
+        <td class="assurance-value" style="padding: 10px 0; border-top: 1px solid #f0f0f0; color: #111111; font-weight: 700; font-size: 13px; text-align: right;">SHA-256 Synchronized · Immutable Journal Sequence</td>
       </tr>
     </table>
 

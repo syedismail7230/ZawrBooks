@@ -31,13 +31,19 @@ export async function POST(req: Request) {
     } else if (action === 'REVIEW_VENDOR_BILL' && payload) {
       const { id, decision, approver, comment } = payload;
       serverStore.reviewVendorBill(id, decision, approver, comment);
+    } else if (action === 'ADD_REPORT_SCHEDULE' && payload) {
+      serverStore.saveReportSchedule(payload);
+    } else if (action === 'DELETE_REPORT_SCHEDULE' && payload) {
+      serverStore.deleteReportSchedule(payload.id || payload);
+    } else if (action === 'TRIGGER_SCHEDULED_REPORT' && payload) {
+      serverStore.triggerScheduledReport(payload.id, payload.log);
     } else if (action === 'SET_ORGANIZATION' && payload) {
       serverStore.saveOrganization(payload);
     } else if (state) {
       // Merge client collections with server collections (union by id, newest first)
       const current = serverStore.getStoreState();
       
-      const mergeById = <T extends { id: string }>(serverList: T[], clientList: T[] = []): T[] => {
+      const mergeById = <T extends { id: string }>(serverList: T[] = [], clientList: T[] = []): T[] => {
         const map = new Map<string, T>();
         for (const item of serverList) {
           if (item?.id) map.set(item.id, item);
@@ -58,6 +64,8 @@ export async function POST(req: Request) {
         customers: mergeById(current.customers, state.customers),
         vendors: mergeById(current.vendors, state.vendors),
         accounts: (state.accounts && state.accounts.length > 0) ? state.accounts : current.accounts,
+        reportSchedules: mergeById(current.reportSchedules, state.reportSchedules),
+        reportExecutionLogs: mergeById(current.reportExecutionLogs, state.reportExecutionLogs),
       });
 
       return NextResponse.json({

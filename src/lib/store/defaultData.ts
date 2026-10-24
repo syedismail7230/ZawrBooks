@@ -1,4 +1,4 @@
-import { Account, Organization } from '@/types';
+import { Account, Organization, ReportSchedule } from '@/types';
 
 export const defaultOrganization: Organization = {
   id: 'org-zawr-main',
@@ -26,4 +26,55 @@ export const defaultStandardAccounts: Account[] = [
   { id: 'acc-3010', organizationId: 'org-zawr-main', code: '3010', name: 'Shareholder Capital', type: 'Equity', subType: 'Equity Capital', currency: 'INR', isActive: true, balancePaise: 30000000 },
   { id: 'acc-4010', organizationId: 'org-zawr-main', code: '4010', name: 'Primary Operating Revenue', type: 'Revenue', subType: 'Operating Revenue', currency: 'INR', isActive: true, balancePaise: 0 },
   { id: 'acc-5010', organizationId: 'org-zawr-main', code: '5010', name: 'Operating & Administrative Expenses', type: 'Expense', subType: 'Operating Expense', currency: 'INR', isActive: true, balancePaise: 0 },
+];
+
+export const defaultReportSchedules: ReportSchedule[] = [
+  {
+    id: 'sched-daily-daybook',
+    organizationId: 'org-zawr-main',
+    reportName: 'Daily Day Book & Cash Audit Digest',
+    reportType: 'DayBook',
+    frequency: 'Daily',
+    recipientEmails: ['accounts@zawrindustries.com', 'admin@zawrindustries.com', 'syedismailart@gmail.com'],
+    outputFormat: 'Excel',
+    isActive: true,
+    nextRunAt: new Date(Date.now() + 86400000).toISOString(),
+    lastRunAt: undefined,
+  },
+  {
+    id: 'sched-weekly-executive',
+    organizationId: 'org-zawr-main',
+    reportName: 'Weekly Executive Financial Dossier (Combined Report)',
+    reportType: 'ExecutiveCombined',
+    frequency: 'Weekly',
+    recipientEmails: ['accounts@zawrindustries.com', 'admin@zawrindustries.com'],
+    outputFormat: 'Excel',
+    isActive: true,
+    nextRunAt: new Date(Date.now() + 7 * 86400000).toISOString(),
+    lastRunAt: undefined,
+  },
+  {
+    id: 'sched-monthly-pl',
+    organizationId: 'org-zawr-main',
+    reportName: 'Monthly Profit & Loss & Financial Performance',
+    reportType: 'ProfitLoss',
+    frequency: 'Monthly',
+    recipientEmails: ['accounts@zawrindustries.com', 'admin@zawrindustries.com'],
+    outputFormat: 'Excel',
+    isActive: true,
+    nextRunAt: new Date(Date.now() + 30 * 86400000).toISOString(),
+    lastRunAt: undefined,
+  },
+  {
+    id: 'sched-monthly-gst',
+    organizationId: 'org-zawr-main',
+    reportName: 'Monthly GST 3B Statutory Preparation Digest',
+    reportType: 'GSTSummary',
+    frequency: 'Monthly',
+    recipientEmails: ['accounts@zawrindustries.com', 'admin@zawrindustries.com'],
+    outputFormat: 'Excel',
+    isActive: true,
+    nextRunAt: new Date(Date.now() + 30 * 86400000).toISOString(),
+    lastRunAt: undefined,
+  },
 ];

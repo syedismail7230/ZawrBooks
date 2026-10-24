@@ -15,6 +15,7 @@ export default function ScheduledReportsPage() {
   const [storeState, setStoreState] = useState(globalDataStore.getState());
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [runningId, setRunningId] = useState<string | null>(null);
+  const [isRunningAll, setIsRunningAll] = useState(false);
   const [triggerAlert, setTriggerAlert] = useState<string | null>(null);
 
   // New Schedule Form State
@@ -32,48 +33,67 @@ export default function ScheduledReportsPage() {
   const [testResultMsg, setTestResultMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   useEffect(() => {
+    globalDataStore.syncWithServer();
+
+    // Heartbeat: Check if any routine schedule is due on the server
+    fetch('/api/cron/scheduled-reports')
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.processedCount > 0) {
+          globalDataStore.syncWithServer();
+        }
+      })
+      .catch(() => {});
+
     return globalDataStore.subscribe(() => {
       setStoreState({ ...globalDataStore.getState() });
     });
   }, []);
+
+  const handleRunAllRoutineSchedules = async () => {
+    setIsRunningAll(true);
+    setTriggerAlert(null);
+
+    try {
+      const res = await fetch('/api/cron/scheduled-reports?force=true');
+      const data = await res.json();
+      globalDataStore.syncWithServer();
+      setIsRunningAll(false);
+
+      if (data.success) {
+        const count = data.processedCount || 0;
+        setTriggerAlert(`Successfully executed and dispatched ${count} routine report(s) via SMTP with attached Excel spreadsheets!`);
+      } else {
+        setTriggerAlert(`Execution notice: ${data.error || 'Check server logs'}`);
+      }
+    } catch (err: unknown) {
+      setIsRunningAll(false);
+      setTriggerAlert(`Error running routine schedules: ${(err as Error).message}`);
+    }
+  };
 
   const handleTriggerNow = async (schedule: ReportSchedule) => {
     setRunningId(schedule.id);
     setTriggerAlert(null);
 
     try {
-      // 1. Dispatch real email via Nodemailer route with executive HTML & generated Excel workbook
-      const res = await fetch('/api/email/send', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          to: schedule.recipientEmails,
-          reportType: schedule.reportType || 'ProfitLoss',
-          reportName: schedule.reportName || 'Profit & Loss Statement',
-          frequency: schedule.frequency || 'Daily',
-          storeState: globalDataStore.getState(),
-        }),
-      });
-
+      const res = await fetch(`/api/cron/scheduled-reports?force=true&scheduleId=${schedule.id}`);
       const data = await res.json();
-
-      // 2. Register audit and execution log
-      globalDataStore.triggerScheduledReport(schedule.id);
+      globalDataStore.syncWithServer();
       setRunningId(null);
 
-      if (data.success) {
+      if (data.success && data.reports?.[0]?.status === 'Success') {
+        const report = data.reports[0];
         setTriggerAlert(
-          `Dispatched ${schedule.reportName} with attached Excel spreadsheet (${data.attachmentName || 'ZawrBooks.xlsx'}) via accounts@zawrindustries.com to ${schedule.recipientEmails.join(', ')} (Message ID: ${data.messageId})`
+          `Dispatched ${schedule.reportName} with attached Excel spreadsheet (${report.attachment || 'ZawrBooks.xlsx'}) via accounts@zawrindustries.com to ${schedule.recipientEmails.join(', ')} (Message ID: ${report.messageId})`
         );
       } else {
-        setTriggerAlert(
-          `Report generated. Nodemailer note: ${data.error || 'Check SMTP credentials'}.`
-        );
+        const err = data.reports?.[0]?.error || data.error || 'Check SMTP credentials';
+        setTriggerAlert(`Report dispatch notice: ${err}`);
       }
-    } catch {
+    } catch (err: unknown) {
       setRunningId(null);
-      globalDataStore.triggerScheduledReport(schedule.id);
-      setTriggerAlert(`Dispatched report to ${schedule.recipientEmails.join(', ')}.`);
+      setTriggerAlert(`Error dispatching report: ${(err as Error).message}`);
     }
   };
 
@@ -225,7 +245,15 @@ export default function ScheduledReportsPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleRunAllRoutineSchedules}
+            disabled={isRunningAll}
+          >
+            <Play size={13} className={isRunningAll ? 'animate-spin' : ''} /> {isRunningAll ? 'Dispatching Routine Mails...' : 'Run All Routine Schedules Now'}
+          </Button>
           <Button variant="outline" size="sm" onClick={() => setIsTestModalOpen(true)}>
             <Mail size={13} /> Send Test Email
           </Button>

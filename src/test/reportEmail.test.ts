@@ -120,4 +120,28 @@ describe('Zawr Industries Executive Email & Excel Report Generator', () => {
       )
     ).toBe(true);
   });
+
+  it('persists routine email schedules and records execution logs on the server', async () => {
+    const { serverStore } = await import('@/lib/store/serverStore');
+    const state = serverStore.getStoreState();
+
+    expect(state.reportSchedules.length).toBeGreaterThanOrEqual(4);
+    const daybook = state.reportSchedules.find((s) => s.reportType === 'DayBook');
+    expect(daybook).toBeDefined();
+    expect(daybook?.recipientEmails).toContain('accounts@zawrindustries.com');
+
+    const triggerRes = serverStore.triggerScheduledReport(daybook!.id, {
+      status: 'Success',
+      recipients: daybook!.recipientEmails,
+    });
+
+    expect(triggerRes.success).toBe(true);
+    expect(triggerRes.log.status).toBe('Success');
+    expect(triggerRes.schedule?.lastRunAt).toBeDefined();
+    expect(triggerRes.schedule?.nextRunAt).toBeDefined();
+
+    const updatedState = serverStore.getStoreState();
+    expect(updatedState.reportExecutionLogs.length).toBeGreaterThanOrEqual(1);
+    expect(updatedState.reportExecutionLogs[0].scheduleId).toBe(daybook!.id);
+  });
 });

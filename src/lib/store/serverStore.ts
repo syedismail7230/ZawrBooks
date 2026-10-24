@@ -9,13 +9,15 @@ import {
   Invoice,
   JournalEntry,
   Organization,
+  ReportExecutionLog,
+  ReportSchedule,
   UserProfile,
   Vendor,
   VendorBill,
 } from '@/types';
 
-import { defaultOrganization, defaultStandardAccounts } from './defaultData';
-export { defaultOrganization, defaultStandardAccounts };
+import { defaultOrganization, defaultStandardAccounts, defaultReportSchedules } from './defaultData';
+export { defaultOrganization, defaultStandardAccounts, defaultReportSchedules };
 
 export interface ServerStoreState {
   organization: Organization;
@@ -28,6 +30,8 @@ export interface ServerStoreState {
   journalEntries: JournalEntry[];
   approvalPolicies: ApprovalPolicy[];
   auditEvents: AuditEvent[];
+  reportSchedules: ReportSchedule[];
+  reportExecutionLogs: ReportExecutionLog[];
   lastUpdated: string;
 }
 
@@ -68,6 +72,8 @@ class ServerStore {
           journalEntries: [],
           approvalPolicies: [],
           auditEvents: [],
+          reportSchedules: [...defaultReportSchedules],
+          reportExecutionLogs: [],
           lastUpdated: new Date().toISOString(),
         };
         fs.writeFileSync(this.storeFile, JSON.stringify(initial, null, 2), 'utf-8');
@@ -124,6 +130,9 @@ class ServerStore {
         const parsed = JSON.parse(raw);
         const org = this.getOrganization();
         const accounts = (parsed.accounts && parsed.accounts.length > 0) ? parsed.accounts : [...defaultStandardAccounts];
+        const schedules = (parsed.reportSchedules && parsed.reportSchedules.length > 0)
+          ? parsed.reportSchedules
+          : [...defaultReportSchedules];
 
         this.cachedState = {
           ...parsed,
@@ -137,6 +146,8 @@ class ServerStore {
           journalEntries: parsed.journalEntries || [],
           approvalPolicies: parsed.approvalPolicies || [],
           auditEvents: parsed.auditEvents || [],
+          reportSchedules: schedules,
+          reportExecutionLogs: parsed.reportExecutionLogs || [],
           lastUpdated: parsed.lastUpdated || new Date().toISOString(),
         };
         return this.cachedState!;
@@ -157,6 +168,8 @@ class ServerStore {
       journalEntries: [],
       approvalPolicies: [],
       auditEvents: [],
+      reportSchedules: [...defaultReportSchedules],
+      reportExecutionLogs: [],
       lastUpdated: new Date().toISOString(),
     };
   }
@@ -177,6 +190,8 @@ class ServerStore {
         journalEntries: partialState.journalEntries || current.journalEntries,
         approvalPolicies: partialState.approvalPolicies || current.approvalPolicies,
         auditEvents: partialState.auditEvents || current.auditEvents,
+        reportSchedules: partialState.reportSchedules || current.reportSchedules,
+        reportExecutionLogs: partialState.reportExecutionLogs || current.reportExecutionLogs,
         lastUpdated: new Date().toISOString(),
       };
 
@@ -255,6 +270,73 @@ class ServerStore {
     // Add audit notation
     this.saveStoreState({ vendorBills: state.vendorBills });
     return { success: true, bill };
+  }
+
+  public getReportSchedules(): ReportSchedule[] {
+    const state = this.getStoreState();
+    return state.reportSchedules || [];
+  }
+
+  public saveReportSchedule(schedule: ReportSchedule): ReportSchedule {
+    const state = this.getStoreState();
+    const existingIndex = state.reportSchedules.findIndex((s) => s.id === schedule.id);
+    if (existingIndex >= 0) {
+      state.reportSchedules[existingIndex] = schedule;
+    } else {
+      state.reportSchedules.push(schedule);
+    }
+    this.saveStoreState({ reportSchedules: state.reportSchedules });
+    return schedule;
+  }
+
+  public deleteReportSchedule(id: string): boolean {
+    const state = this.getStoreState();
+    const filtered = state.reportSchedules.filter((s) => s.id !== id);
+    this.saveStoreState({ reportSchedules: filtered });
+    return true;
+  }
+
+  public triggerScheduledReport(
+    scheduleId: string,
+    customLog?: Partial<ReportExecutionLog>
+  ): { success: boolean; log: ReportExecutionLog; schedule?: ReportSchedule } {
+    const state = this.getStoreState();
+    const sched = state.reportSchedules.find((s) => s.id === scheduleId);
+    const now = new Date().toISOString();
+
+    const log: ReportExecutionLog = {
+      id: `log-${Date.now()}`,
+      scheduleId,
+      reportName: sched ? sched.reportName : (customLog?.reportName || 'Scheduled Report'),
+      executedAt: now,
+      status: customLog?.status || 'Success',
+      recipients: sched ? sched.recipientEmails : (customLog?.recipients || []),
+      fileSizeKb: customLog?.fileSizeKb || Math.floor(Math.random() * 40) + 50,
+      errorMessage: customLog?.errorMessage,
+    };
+
+    if (sched) {
+      sched.lastRunAt = now;
+      const nextRun = new Date();
+      if (sched.frequency === 'Daily') {
+        nextRun.setDate(nextRun.getDate() + 1);
+      } else if (sched.frequency === 'Weekly') {
+        nextRun.setDate(nextRun.getDate() + 7);
+      } else if (sched.frequency === 'Monthly') {
+        nextRun.setMonth(nextRun.getMonth() + 1);
+      } else if (sched.frequency === 'Quarterly') {
+        nextRun.setMonth(nextRun.getMonth() + 3);
+      }
+      sched.nextRunAt = nextRun.toISOString();
+    }
+
+    state.reportExecutionLogs.unshift(log);
+    this.saveStoreState({
+      reportSchedules: state.reportSchedules,
+      reportExecutionLogs: state.reportExecutionLogs,
+    });
+
+    return { success: true, log, schedule: sched };
   }
 }
 

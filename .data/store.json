@@ -153,5 +153,80 @@
   "journalEntries": [],
   "approvalPolicies": [],
   "auditEvents": [],
-  "lastUpdated": "2026-10-14T20:30:11.593Z"
+  "reportSchedules": [
+    {
+      "id": "sched-daily-daybook",
+      "organizationId": "org-zawr-main",
+      "reportName": "Daily Day Book & Cash Audit Digest",
+      "reportType": "DayBook",
+      "frequency": "Daily",
+      "recipientEmails": [
+        "accounts@zawrindustries.com",
+        "admin@zawrindustries.com",
+        "syedismailart@gmail.com"
+      ],
+      "outputFormat": "Excel",
+      "isActive": true,
+      "nextRunAt": "2026-10-25T14:04:46.543Z",
+      "lastRunAt": "2026-10-24T14:04:46.543Z"
+    },
+    {
+      "id": "sched-weekly-executive",
+      "organizationId": "org-zawr-main",
+      "reportName": "Weekly Executive Financial Dossier (Combined Report)",
+      "reportType": "ExecutiveCombined",
+      "frequency": "Weekly",
+      "recipientEmails": [
+        "accounts@zawrindustries.com",
+        "admin@zawrindustries.com"
+      ],
+      "outputFormat": "Excel",
+      "isActive": true,
+      "nextRunAt": "2026-10-26T03:30:00.000Z"
+    },
+    {
+      "id": "sched-monthly-pl",
+      "organizationId": "org-zawr-main",
+      "reportName": "Monthly Profit & Loss & Financial Performance",
+      "reportType": "ProfitLoss",
+      "frequency": "Monthly",
+      "recipientEmails": [
+        "accounts@zawrindustries.com",
+        "admin@zawrindustries.com"
+      ],
+      "outputFormat": "Excel",
+      "isActive": true,
+      "nextRunAt": "2026-11-01T03:30:00.000Z"
+    },
+    {
+      "id": "sched-monthly-gst",
+      "organizationId": "org-zawr-main",
+      "reportName": "Monthly GST 3B Statutory Preparation Digest",
+      "reportType": "GSTSummary",
+      "frequency": "Monthly",
+      "recipientEmails": [
+        "accounts@zawrindustries.com",
+        "admin@zawrindustries.com"
+      ],
+      "outputFormat": "Excel",
+      "isActive": true,
+      "nextRunAt": "2026-11-10T03:30:00.000Z"
+    }
+  ],
+  "reportExecutionLogs": [
+    {
+      "id": "log-1792850686543",
+      "scheduleId": "sched-daily-daybook",
+      "reportName": "Daily Day Book & Cash Audit Digest",
+      "executedAt": "2026-10-24T14:04:46.543Z",
+      "status": "Success",
+      "recipients": [
+        "accounts@zawrindustries.com",
+        "admin@zawrindustries.com",
+        "syedismailart@gmail.com"
+      ],
+      "fileSizeKb": 68
+    }
+  ],
+  "lastUpdated": "2026-10-24T14:04:46.543Z"
 }

@@ -22,7 +22,7 @@ import {
 } from '@/lib/accounting/engine';
 import { computeSyncHash } from '@/lib/audit/trail';
 import { evaluateExpenseApproval } from '@/lib/rbac/permissions';
-import { defaultOrganization, defaultStandardAccounts } from './defaultData';
+import { defaultOrganization, defaultStandardAccounts, defaultReportSchedules } from './defaultData';
 
 export interface DataStoreState {
   isAuthenticated: boolean;
@@ -114,7 +114,7 @@ class DataStore {
       bankStatementLines: [],
       approvalPolicies: [],
       auditEvents: [],
-      reportSchedules: [],
+      reportSchedules: [...defaultReportSchedules],
       reportExecutionLogs: [],
       documents: [],
       budgets: [],
@@ -198,11 +198,17 @@ class DataStore {
           org = { ...defaultOrganization };
         }
 
+        const schedules = (parsed.reportSchedules && parsed.reportSchedules.length > 0)
+          ? parsed.reportSchedules
+          : [...defaultReportSchedules];
+
         this.state = {
           ...this.state,
           ...parsed,
           organization: org,
           accounts: (parsed.accounts && parsed.accounts.length > 0) ? parsed.accounts : [...defaultStandardAccounts],
+          reportSchedules: schedules,
+          reportExecutionLogs: parsed.reportExecutionLogs || [],
           users: mergedUsers,
           currentUser: activeUser,
           isAuthenticated: typeof parsed.isAuthenticated === 'boolean' ? parsed.isAuthenticated : false,
@@ -277,6 +283,38 @@ class DataStore {
           if (mergedBills.length !== this.state.vendorBills.length) {
             this.state.vendorBills = mergedBills;
             changed = true;
+          }
+
+          // Reconcile reportSchedules (union by ID)
+          if (s.reportSchedules && s.reportSchedules.length > 0) {
+            const schedMap = new Map<string, ReportSchedule>();
+            for (const sched of s.reportSchedules) {
+              if (sched?.id) schedMap.set(sched.id, sched);
+            }
+            for (const sched of this.state.reportSchedules || []) {
+              if (sched?.id && !schedMap.has(sched.id)) {
+                schedMap.set(sched.id, sched);
+              }
+            }
+            const mergedSchedules = Array.from(schedMap.values());
+            if (mergedSchedules.length !== (this.state.reportSchedules?.length || 0)) {
+              this.state.reportSchedules = mergedSchedules;
+              changed = true;
+            }
+          }
+
+          // Reconcile reportExecutionLogs (union by ID)
+          if (s.reportExecutionLogs && s.reportExecutionLogs.length > 0) {
+            const logMap = new Map<string, ReportExecutionLog>();
+            for (const log of s.reportExecutionLogs) {
+              if (log?.id) logMap.set(log.id, log);
+            }
+            for (const log of this.state.reportExecutionLogs || []) {
+              if (log?.id && !logMap.has(log.id)) {
+                logMap.set(log.id, log);
+              }
+            }
+            this.state.reportExecutionLogs = Array.from(logMap.values());
           }
 
           if (s.organization) {
@@ -987,6 +1025,17 @@ class DataStore {
 
     if (sched) {
       sched.lastRunAt = now;
+      const nextRun = new Date();
+      if (sched.frequency === 'Daily') {
+        nextRun.setDate(nextRun.getDate() + 1);
+      } else if (sched.frequency === 'Weekly') {
+        nextRun.setDate(nextRun.getDate() + 7);
+      } else if (sched.frequency === 'Monthly') {
+        nextRun.setMonth(nextRun.getMonth() + 1);
+      } else if (sched.frequency === 'Quarterly') {
+        nextRun.setMonth(nextRun.getMonth() + 3);
+      }
+      sched.nextRunAt = nextRun.toISOString();
     }
 
     this.state.reportExecutionLogs.unshift(log);
@@ -1000,6 +1049,18 @@ class DataStore {
     );
 
     this.persist();
+
+    if (typeof window !== 'undefined') {
+      fetch('/api/store/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'TRIGGER_SCHEDULED_REPORT',
+          payload: { id: scheduleId, log },
+        }),
+      }).catch(() => {});
+    }
+
     return { success: true, log };
   }
 
@@ -1060,6 +1121,18 @@ class DataStore {
       recipients: newSched.recipientEmails,
     });
     this.persist();
+
+    if (typeof window !== 'undefined') {
+      fetch('/api/store/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'ADD_REPORT_SCHEDULE',
+          payload: newSched,
+        }),
+      }).catch(() => {});
+    }
+
     return newSched;
   }
 
@@ -1077,6 +1150,18 @@ class DataStore {
       );
     }
     this.persist();
+
+    if (typeof window !== 'undefined') {
+      fetch('/api/store/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'DELETE_REPORT_SCHEDULE',
+          payload: { id: scheduleId },
+        }),
+      }).catch(() => {});
+    }
+
     return { success: true };
   }
 

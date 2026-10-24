@@ -22,6 +22,10 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  experimental: {
+    // @ts-ignore - security upgrade telemetry setting
+    agentUpgrade: "security",
+  },
 };
 
 export default nextConfig;
